@@ -19,7 +19,7 @@
         </ul>
 
         <p><em>This plugin is not affiliated with, endorsed by, or officially connected to Statamic.
-        "Statamic" and the Statamic logo are trademarks of Wilderborn.</em></p>
+        "Statamic" and the Statamic logo are trademarks of Statamic.</em></p>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
