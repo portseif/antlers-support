@@ -24,6 +24,7 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.xml</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- File Type -->
@@ -61,5 +62,9 @@
         <lang.commenter
             language="Antlers"
             implementationClass="com.antlers.support.editor.AntlersCommenter"/>
+
+        <!-- Goto Declaration (cmd+click on partials) -->
+        <gotoDeclarationHandler
+            implementationClass="com.antlers.support.editor.AntlersGotoDeclarationHandler"/>
     </extensions>
 </idea-plugin>
