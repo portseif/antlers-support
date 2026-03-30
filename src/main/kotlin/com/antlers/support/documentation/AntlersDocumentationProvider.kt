@@ -121,7 +121,7 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
         builder.append(DocumentationMarkup.DEFINITION_START)
         builder.append(kind)
         builder.append(" <code>")
-        builder.append(StringUtil.escapeXmlEntities(item.name))
+        builder.append(StringUtil.escapeXmlEntities(item.displayName))
         builder.append("</code>")
         builder.append(DocumentationMarkup.DEFINITION_END)
 
@@ -130,7 +130,6 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
         builder.append(DocumentationMarkup.CONTENT_END)
 
         builder.append(DocumentationMarkup.SECTIONS_START)
-        addSection(builder, "Official Docs", """<a href="${StringUtil.escapeXmlEntities(item.url)}">${StringUtil.escapeXmlEntities(item.url)}</a>""")
         item.example?.let {
             addSection(
                 builder,
@@ -142,7 +141,7 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
 
         val escapedName = StringUtil.escapeXmlEntities(item.name)
         val escapedUrl = StringUtil.escapeXmlEntities(item.url)
-        builder.append("<p><code>$escapedName</code> on <a href=\"$escapedUrl\">statamic.dev</a></p>")
+        builder.append("<p><a href=\"$escapedUrl\"><code>$escapedName</code> on statamic.dev</a></p>")
 
         return builder.toString()
     }
