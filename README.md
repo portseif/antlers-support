@@ -1,4 +1,4 @@
-# Antlers
+# Statamic Toolkit for PhpStorm
 
 A JetBrains IDE plugin providing syntax highlighting and editor support for the [Antlers](https://statamic.dev/frontend/antlers) template language used by [Statamic CMS](https://statamic.com).
 
