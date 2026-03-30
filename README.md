@@ -9,9 +9,18 @@ A JetBrains IDE plugin providing syntax highlighting and editor support for the 
   - String and number literals
   - Comments (`{{# #}}`)
   - PHP regions (`{{? ?}}`, `{{$ $}}`)
+  - Semantic colors for tag names, parameter names, and more
 - **HTML Intelligence Preserved** -- full HTML/CSS/JS support within template files via IntelliJ's Template Language framework
+- **Code Completion** -- Statamic tags, modifiers, and variables with descriptions from the official docs
+- **Hover Documentation** -- quick docs with examples and links to statamic.dev
+- **Alpine.js Support** -- JavaScript intelligence inside Alpine attributes (`x-data`, `@click`, `x-bind`, etc.) with method navigation back to `x-data`
+- **Partial Navigation** -- Cmd-click on `partial:name` to jump to the partial file
+- **Structure View** -- outline of Antlers tags in the Structure tool window
+- **Formatting** -- template-aware formatting for mixed Antlers/HTML files
 - **Brace Matching** -- highlights matching `{{ }}` pairs
 - **Block Commenting** -- toggle comments with `{{# #}}` via Ctrl+/ (Cmd+/)
+- **Typing Aids** -- auto-closing braces, smart quotes, and smart enter handling
+- **Tools > Statamic** -- controller, tag, and modifier generators plus content query snippets in PhpStorm
 - **Customizable Colors** -- Settings > Editor > Color Scheme > Antlers
 
 ## Supported Syntax
@@ -64,12 +73,15 @@ This launches a sandboxed IDE instance with the plugin installed.
 - [x] Brace matching
 - [x] Block commenting
 - [x] HTML/CSS/JS intelligence in template files
+- [x] Code completion for Statamic tags and modifiers
+- [x] Go-to-definition for partials
+- [x] Formatting support
+- [x] Structure view
+- [x] Alpine.js support
+- [x] Hover documentation
+- [x] Statamic generators (controllers, tags, modifiers)
 - [ ] Code folding for tag pairs
-- [ ] Code completion for Statamic tags and modifiers
-- [ ] Go-to-definition for partials
 - [ ] Live templates / snippets
-- [ ] Formatting support
-- [ ] Structure view
 
 ## Disclaimer
 

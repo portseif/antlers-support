@@ -57,8 +57,7 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
     }
 
     override fun getUrlFor(element: PsiElement?, originalElement: PsiElement?): MutableList<String>? {
-        val resolved = resolveDocItem(element) ?: resolveDocItem(originalElement) ?: return null
-        return mutableListOf(resolved.item.url)
+        return null
     }
 
     private fun resolveDocItem(element: PsiElement?): ResolvedDoc? {
@@ -140,6 +139,10 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
             )
         }
         builder.append(DocumentationMarkup.SECTIONS_END)
+
+        val escapedName = StringUtil.escapeXmlEntities(item.name)
+        val escapedUrl = StringUtil.escapeXmlEntities(item.url)
+        builder.append("<p><code>$escapedName</code> on <a href=\"$escapedUrl\">statamic.dev</a></p>")
 
         return builder.toString()
     }
