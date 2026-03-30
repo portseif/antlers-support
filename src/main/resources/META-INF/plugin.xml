@@ -23,7 +23,7 @@
             <li>Alpine.js support: JS intelligence in <code>x-data</code>, <code>x-on</code>, <code>@click</code>, etc.</li>
             <li>Code formatting for Antlers expressions</li>
             <li>Configurable settings (Settings &gt; Languages &amp; Frameworks &gt; Antlers)</li>
-            <li>Tools menu actions for Statamic content query snippets and controller scaffolds</li>
+            <li>Tools menu actions for Statamic content query snippets, controller scaffolds, tag scaffolds, and modifier scaffolds</li>
         </ul>
 
         <p><em>This plugin is not affiliated with, endorsed by, or officially connected to Statamic.
@@ -153,12 +153,14 @@
 
     <actions>
         <group id="com.antlers.support.actions.StatamicToolsGroup"
+               class="com.antlers.support.actions.StatamicProjectActionGroup"
                text="Statamic"
                description="Statamic and Antlers productivity actions"
                popup="true">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
 
             <group id="com.antlers.support.actions.ContentQueriesGroup"
+                   class="com.antlers.support.actions.StatamicPhpInsertActionGroup"
                    text="Content Queries"
                    description="Insert Statamic content query snippets"
                    popup="true">
@@ -192,6 +194,26 @@
                         class="com.antlers.support.actions.CreateAntlersViewControllerAction"
                         text="Create Antlers View Controller..."
                         description="Create a controller that returns a Statamic View with template and layout"/>
+            </group>
+
+            <group id="com.antlers.support.actions.TagsGroup"
+                   text="Tags"
+                   description="Create Statamic tag class scaffolds"
+                   popup="true">
+                <action id="com.antlers.support.actions.CreateStatamicTagAction"
+                        class="com.antlers.support.actions.CreateStatamicTagAction"
+                        text="Create Statamic Tag..."
+                        description="Create a Statamic tag class scaffold under app/Tags"/>
+            </group>
+
+            <group id="com.antlers.support.actions.ModifiersGroup"
+                   text="Modifiers"
+                   description="Create Statamic modifier class scaffolds"
+                   popup="true">
+                <action id="com.antlers.support.actions.CreateStatamicModifierAction"
+                        class="com.antlers.support.actions.CreateStatamicModifierAction"
+                        text="Create Statamic Modifier..."
+                        description="Create a Statamic modifier class scaffold under app/Modifiers"/>
             </group>
         </group>
     </actions>

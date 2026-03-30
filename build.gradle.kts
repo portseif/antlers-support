@@ -1,4 +1,5 @@
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import java.io.File
 
 plugins {
     id("java")
@@ -9,6 +10,57 @@ plugins {
 
 group = providers.gradleProperty("pluginGroup").get()
 version = providers.gradleProperty("pluginVersion").get()
+
+fun extractLatestChangeNotes(changelog: File, releaseVersion: String): String {
+    if (!changelog.exists()) return "<p>Initial release.</p>"
+
+    val lines = changelog.readLines()
+    val header = "## [$releaseVersion]"
+    val startIndex = lines.indexOfFirst { it.startsWith(header) }
+    if (startIndex == -1) return "<p>Release $releaseVersion</p>"
+
+    val bodyLines = lines
+        .drop(startIndex + 1)
+        .takeWhile { !it.startsWith("## [") }
+        .dropWhile { it.isBlank() }
+        .dropLastWhile { it.isBlank() }
+
+    if (bodyLines.isEmpty()) return "<p>Release $releaseVersion</p>"
+
+    val html = StringBuilder()
+    var insideList = false
+
+    fun closeListIfNeeded() {
+        if (insideList) {
+            html.append("</ul>")
+            insideList = false
+        }
+    }
+
+    bodyLines.forEach { line ->
+        when {
+            line.startsWith("- ") -> {
+                if (!insideList) {
+                    html.append("<ul>")
+                    insideList = true
+                }
+                html.append("<li>")
+                html.append(line.removePrefix("- ").trim())
+                html.append("</li>")
+            }
+            line.isBlank() -> closeListIfNeeded()
+            else -> {
+                closeListIfNeeded()
+                html.append("<p>")
+                html.append(line.trim())
+                html.append("</p>")
+            }
+        }
+    }
+
+    closeListIfNeeded()
+    return html.toString()
+}
 
 repositories {
     mavenCentral()
@@ -43,6 +95,12 @@ intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
+        changeNotes = providers.provider {
+            extractLatestChangeNotes(
+                changelog = layout.projectDirectory.file("CHANGELOG.md").asFile,
+                releaseVersion = providers.gradleProperty("pluginVersion").get()
+            )
+        }
 
         ideaVersion {
             sinceBuild = providers.gradleProperty("sinceBuildVersion")

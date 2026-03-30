@@ -43,4 +43,39 @@ class StatamicSnippetTemplatesTest {
         assertTrue(template.contains("->template('myview')"))
         assertTrue(template.contains("->layout('mylayout')"))
     }
+
+    @Test
+    fun normalizesTagClassNames() {
+        assertEquals("HeroBars", StatamicSnippetTemplates.normalizeTagClassName("hero bars"))
+        assertEquals("MyTag", StatamicSnippetTemplates.normalizeTagClassName("MyTag"))
+        assertNull(StatamicSnippetTemplates.normalizeTagClassName("///"))
+    }
+
+    @Test
+    fun normalizesModifierClassNames() {
+        assertEquals("Repeat", StatamicSnippetTemplates.normalizeModifierClassName("repeat"))
+        assertEquals("UpperCaseWords", StatamicSnippetTemplates.normalizeModifierClassName("upper case words"))
+        assertNull(StatamicSnippetTemplates.normalizeModifierClassName("///"))
+    }
+
+    @Test
+    fun buildsTagClassTemplate() {
+        val template = StatamicSnippetTemplates.buildTagClass("HeroBars")
+
+        assertTrue(template.contains("namespace App\\Tags;"))
+        assertTrue(template.contains("use Statamic\\Tags\\Tags;"))
+        assertTrue(template.contains("class HeroBars extends Tags"))
+        assertTrue(template.contains("return 'Hello from the HeroBars tag.';"))
+    }
+
+    @Test
+    fun buildsModifierClassTemplate() {
+        val template = StatamicSnippetTemplates.buildModifierClass("Repeat")
+
+        assertTrue(template.contains("namespace App\\Modifiers;"))
+        assertTrue(template.contains("use Statamic\\Modifiers\\Modifier;"))
+        assertTrue(template.contains("class Repeat extends Modifier"))
+        assertTrue(template.contains("public function index(\$value, \$params, \$context)"))
+        assertTrue(template.contains("return \$value;"))
+    }
 }

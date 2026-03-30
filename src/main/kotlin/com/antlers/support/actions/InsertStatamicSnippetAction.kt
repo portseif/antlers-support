@@ -19,7 +19,8 @@ abstract class InsertStatamicSnippetAction(
     override fun update(event: AnActionEvent) {
         val context = actionContext(event)
         val hasEditor = event.getData(CommonDataKeys.EDITOR) != null
-        event.presentation.isEnabledAndVisible = context.isPhpFile && hasEditor
+        event.presentation.isVisible = context.hasLaravelStructure
+        event.presentation.isEnabled = context.isPhpFile && hasEditor
     }
 
     override fun actionPerformed(event: AnActionEvent) {

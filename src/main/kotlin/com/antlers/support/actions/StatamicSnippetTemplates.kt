@@ -66,7 +66,7 @@ object StatamicSnippetTemplates {
         globalSetQuery
     )
 
-    fun normalizeControllerClassName(rawName: String): String? {
+    private fun normalizePhpClassName(rawName: String): String? {
         val parts = rawName
             .trim()
             .split(Regex("[^A-Za-z0-9]+"))
@@ -77,9 +77,51 @@ object StatamicSnippetTemplates {
 
         if (parts.isEmpty()) return null
 
-        val joined = parts.joinToString("")
+        return parts.joinToString("")
+    }
+
+    fun normalizeControllerClassName(rawName: String): String? {
+        val joined = normalizePhpClassName(rawName) ?: return null
         return if (joined.endsWith("Controller")) joined else "${joined}Controller"
     }
+
+    fun normalizeTagClassName(rawName: String): String? = normalizePhpClassName(rawName)
+
+    fun normalizeModifierClassName(rawName: String): String? = normalizePhpClassName(rawName)
+
+    fun buildTagClass(className: String): String = """
+        <?php
+        
+        namespace App\Tags;
+        
+        use Statamic\Tags\Tags;
+        
+        class $className extends Tags
+        {
+            public function index()
+            {
+                return 'Hello from the $className tag.';
+            }
+        }
+        
+    """.trimIndent()
+
+    fun buildModifierClass(className: String): String = """
+        <?php
+        
+        namespace App\Modifiers;
+        
+        use Statamic\Modifiers\Modifier;
+        
+        class $className extends Modifier
+        {
+            public function index(${'$'}value, ${'$'}params, ${'$'}context)
+            {
+                return ${'$'}value;
+            }
+        }
+        
+    """.trimIndent()
 
     fun buildBasicController(className: String): String = """
         <?php
