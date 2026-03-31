@@ -153,12 +153,18 @@ class AntlersFoldingBuilder : FoldingBuilderEx(), DumbAware {
     override fun getPlaceholderText(node: ASTNode): String = when (val psi = node.psi) {
         is AntlersAntlersTag -> {
             val condTag = psi.conditionalTag
-            when {
-                psi.tagExpression != null       -> "{{ ${psi.tagExpression!!.tagName.text} }}..."
-                condTag?.keywordIf     != null  -> "{{ if }}..."
-                condTag?.keywordUnless != null  -> "{{ unless }}..."
-                else                            -> "{{ ... }}"
+            // Show the full expression/condition text so folded blocks remain readable,
+            // e.g. "{{ if site:environment === 'production' }}..." instead of "{{ if }}..."
+            // Truncate at 60 chars so very long conditions don't overflow the gutter.
+            val rawText: String? = when {
+                psi.tagExpression != null -> psi.tagExpression!!.text.trim()
+                condTag?.keywordIf != null || condTag?.keywordUnless != null -> condTag!!.text.trim()
+                else -> null
             }
+            if (rawText != null) {
+                val display = if (rawText.length > 60) rawText.take(57) + "…" else rawText
+                "{{ $display }}..."
+            } else "{{ ... }}"
         }
         is AntlersComment      -> "{{# ... #}}"
         is AntlersNoparseBlock -> "{{ noparse }}..."

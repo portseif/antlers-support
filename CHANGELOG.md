@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.2]
+- **Reformat Code** now works for Antlers expressions — spacing is enforced around operators (`===`, `&&`, `||`, `+`, etc.), pipes (`|`), delimiters (`{{ }}`), and colons/commas in modifier arguments.
+- **Folded block labels** now show the full expression instead of just the keyword — e.g. `{{ if site:environment === 'production' }}...` instead of `{{ if }}...`. Labels truncate at 60 characters.
+
 ## [0.7.1]
 - Fixed parse error "IDENTIFIER expected, got 'if'" on `{{ /if }}` and `{{ /unless }}` closing tags. The grammar now accepts keyword-named closing forms alongside regular identifier names.
 - Fixed formatter incorrectly indenting `{{ else }}`, `{{ elseif }}`, and `{{ endif }}` as if they were content inside the `{{ if }}` block instead of sibling tags at the same level.

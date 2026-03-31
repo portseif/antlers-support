@@ -6,6 +6,7 @@ import com.intellij.formatting.templateLanguages.TemplateLanguageBlock
 import com.intellij.formatting.templateLanguages.TemplateLanguageBlockFactory
 import com.intellij.lang.ASTNode
 import com.intellij.psi.codeStyle.CodeStyleSettings
+import com.antlers.support.AntlersLanguage
 import com.antlers.support.psi.AntlersTypes
 import com.antlers.support.lexer.AntlersTokenTypes
 
@@ -18,7 +19,72 @@ class AntlersBlock(
     foreignChildren: List<DataLanguageBlockWrapper>?
 ) : TemplateLanguageBlock(node, wrap, alignment, blockFactory, codeStyleSettings, foreignChildren) {
 
-    override fun getSpacing(child1: Block?, child2: Block): Spacing? = null
+    // Build spacing rules once per block using the active code style settings.
+    // Rules are ordered from most-specific to least-specific; the SpacingBuilder
+    // returns the first match.
+    private val spacingBuilder: SpacingBuilder = SpacingBuilder(codeStyleSettings, AntlersLanguage.INSTANCE)
+        // ── Delimiters ──────────────────────────────────────────────────────────
+        // {{ tag }}  not  {{tag}}
+        .after(AntlersTokenTypes.ANTLERS_OPEN).spaces(1)
+        .before(AntlersTokenTypes.ANTLERS_CLOSE).spaces(1)
+        // {{ tag /}}  not  {{ tag/}}
+        .before(AntlersTokenTypes.TAG_SELF_CLOSE).spaces(1)
+
+        // ── Comparison / equality operators ─────────────────────────────────────
+        .around(AntlersTokenTypes.OP_IDENTICAL).spaces(1)      // ===
+        .around(AntlersTokenTypes.OP_NOT_IDENTICAL).spaces(1)  // !==
+        .around(AntlersTokenTypes.OP_EQUALS).spaces(1)         // ==
+        .around(AntlersTokenTypes.OP_NOT_EQUALS).spaces(1)     // !=
+        .around(AntlersTokenTypes.OP_SPACESHIP).spaces(1)      // <=>
+        .around(AntlersTokenTypes.OP_GREATER_EQUAL).spaces(1)  // >=
+        .around(AntlersTokenTypes.OP_LESS_EQUAL).spaces(1)     // <=
+        .around(AntlersTokenTypes.OP_GREATER).spaces(1)        // >
+        .around(AntlersTokenTypes.OP_LESS).spaces(1)           // <
+
+        // ── Logical operators ────────────────────────────────────────────────────
+        .around(AntlersTokenTypes.OP_AND).spaces(1)            // &&
+        .around(AntlersTokenTypes.OP_OR).spaces(1)             // ||
+        .around(AntlersTokenTypes.OP_NOT).spaces(1)            // !
+        .around(AntlersTokenTypes.OP_NULL_COALESCE).spaces(1)  // ??
+        // Word-form logical operators
+        .around(AntlersTokenTypes.KEYWORD_AND).spaces(1)       // and
+        .around(AntlersTokenTypes.KEYWORD_OR).spaces(1)        // or
+        .around(AntlersTokenTypes.KEYWORD_XOR).spaces(1)       // xor
+        .around(AntlersTokenTypes.KEYWORD_NOT).spaces(1)       // not
+
+        // ── Arithmetic operators ─────────────────────────────────────────────────
+        .around(AntlersTokenTypes.OP_PLUS).spaces(1)
+        .around(AntlersTokenTypes.OP_MINUS).spaces(1)
+        .around(AntlersTokenTypes.OP_MULTIPLY).spaces(1)
+        .around(AntlersTokenTypes.OP_DIVIDE).spaces(1)
+        .around(AntlersTokenTypes.OP_MODULO).spaces(1)
+        .around(AntlersTokenTypes.OP_POWER).spaces(1)          // **
+        .around(AntlersTokenTypes.OP_RANGE).spaces(1)          // ..
+
+        // ── Ternary ──────────────────────────────────────────────────────────────
+        .around(AntlersTokenTypes.OP_TERNARY_QUESTION).spaces(1) // ?
+        .around(AntlersTokenTypes.OP_GATEKEEPER).spaces(1)       // ?=
+
+        // ── Modifier pipe ────────────────────────────────────────────────────────
+        // {{ title | upper | truncate:100 }}
+        .around(AntlersTokenTypes.OP_PIPE).spaces(1)
+
+        // ── Parameter assignment: no space — limit="5" not limit = "5" ──────────
+        .around(AntlersTokenTypes.OP_ASSIGN).none()
+
+        // ── Colon: no space — collection:blog, truncate:100 ─────────────────────
+        .around(AntlersTokenTypes.COLON).none()
+
+        // ── Comma in modifier args ────────────────────────────────────────────────
+        .before(AntlersTokenTypes.COMMA).none()
+        .after(AntlersTokenTypes.COMMA).spaces(1)
+
+    override fun getSpacing(child1: Block?, child2: Block): Spacing? {
+        // Let our rules run first; fall back to the TemplateLanguageBlock
+        // implementation which handles DataLanguageBlockWrapper pairs.
+        return spacingBuilder.getSpacing(this, child1, child2)
+            ?: super.getSpacing(child1, child2)
+    }
 
     override fun getIndent(): Indent {
         return when (myNode.elementType) {
