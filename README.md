@@ -21,7 +21,7 @@ A JetBrains IDE plugin providing syntax highlighting and editor support for the 
 - **Brace Matching** -- highlights matching `{{ }}` pairs
 - **Block Commenting** -- toggle comments with `{{# #}}` via Ctrl+/ (Cmd+/)
 - **Typing Aids** -- auto-closing braces, smart quotes, and smart enter handling
-- **Tools > Statamic** -- controller, tag, and modifier generators plus content query snippets in PhpStorm
+- **Statamic Menu** -- top-level menu with controller, tag, and modifier generators plus content query snippets
 - **Customizable Colors** -- Settings > Editor > Color Scheme > Antlers
 
 ## Supported Syntax
@@ -47,8 +47,8 @@ A JetBrains IDE plugin providing syntax highlighting and editor support for the 
 ### From Source
 
 ```bash
-git clone https://github.com/portseif/antlers-support.git
-cd antlers-support
+git clone https://github.com/portseif/statamic-toolkit-phpstorm.git
+cd statamic-toolkit-phpstorm
 ./gradlew runIde
 ```
 

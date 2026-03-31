@@ -1,6 +1,9 @@
 package com.antlers.support.completion
 
+import com.antlers.support.AntlersIcons
 import com.antlers.support.statamic.StatamicCatalog
+import com.intellij.codeInsight.lookup.LookupElement
+import com.intellij.codeInsight.lookup.LookupElementBuilder
 
 object StatamicData {
     data class CompletionItem(val name: String, val description: String)
@@ -31,7 +34,52 @@ object StatamicData {
         StatamicCatalog.variables.map { CompletionItem(it.name, it.description) }
     }
 
-    fun getSubTags(tagName: String): List<CompletionItem> {
-        return TAG_SCOPES[tagName].orEmpty()
+    // -------------------------------------------------------------------------
+    // Pre-built LookupElement lists.
+    // LookupElementBuilder produces stateless, immutable elements — safe to
+    // cache and reuse across completion sessions instead of rebuilding on every
+    // invocation (which used to allocate N objects per keystroke).
+    // -------------------------------------------------------------------------
+
+    /** Ready-to-add elements for all top-level Statamic tags. */
+    val TAG_ELEMENTS: List<LookupElement> by lazy {
+        TAGS.map { item ->
+            LookupElementBuilder.create(item.name)
+                .withTypeText(item.description, true)
+                .withIcon(AntlersIcons.FILE)
+                .bold()
+        }
     }
+
+    /** Ready-to-add elements for all Statamic modifiers. */
+    val MODIFIER_ELEMENTS: List<LookupElement> by lazy {
+        MODIFIERS.map { item ->
+            LookupElementBuilder.create(item.name)
+                .withTypeText(item.description, true)
+                .withIcon(AntlersIcons.FILE)
+                .bold()
+        }
+    }
+
+    /** Ready-to-add elements for all Statamic variables. */
+    val VARIABLE_ELEMENTS: List<LookupElement> by lazy {
+        VARIABLES.map { item ->
+            LookupElementBuilder.create(item.name)
+                .withTypeText(item.description, true)
+        }
+    }
+
+    /** Pre-built sub-tag elements keyed by the parent tag name (e.g. "nav"). */
+    private val SUB_TAG_ELEMENT_MAP: Map<String, List<LookupElement>> by lazy {
+        TAG_SCOPES.mapValues { (_, items) ->
+            items.map { item ->
+                LookupElementBuilder.create(item.name)
+                    .withTypeText(item.description, true)
+                    .withIcon(AntlersIcons.FILE)
+            }
+        }
+    }
+
+    fun getSubTagElements(tagName: String): List<LookupElement> =
+        SUB_TAG_ELEMENT_MAP[tagName].orEmpty()
 }

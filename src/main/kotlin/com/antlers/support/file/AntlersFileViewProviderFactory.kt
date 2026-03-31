@@ -22,6 +22,9 @@ class AntlersFileViewProviderFactory : FileViewProviderFactory {
             .getMapping(file)
             ?: HTMLLanguage.INSTANCE
 
+        // If the mapped data language is itself a TemplateLanguage (e.g., the user
+        // mapped another template engine), fall back to PlainText to prevent infinite
+        // template-within-template recursion in the file view provider.
         val templateLang = if (mappedLanguage is TemplateLanguage) {
             PlainTextLanguage.INSTANCE
         } else {

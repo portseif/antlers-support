@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/web-types/nicolo-nicolo/nicolo/packages/schema/web-types.json",
+  "name": "statamic-toolkit-alpine",
+  "version": "1.0.0",
+  "js-types-syntax": "typescript",
+  "description-markup": "none",
+  "framework-config": {
+    "enable-when": {
+      "file-extensions": ["antlers.html", "antlers.php"]
+    }
+  },
+  "contributions": {
+    "html": {
+      "attributes": [
+        { "name": "x-data", "description": "Alpine.js component data scope" },
+        { "name": "x-init", "description": "Alpine.js initialization expression" },
+        { "name": "x-show", "description": "Alpine.js conditional visibility" },
+        { "name": "x-bind", "description": "Alpine.js attribute binding", "pattern": { "or": ["x-bind:*", ":*"] } },
+        { "name": "x-on", "description": "Alpine.js event listener", "pattern": { "or": ["x-on:*", "@*"] } },
+        { "name": "x-text", "description": "Alpine.js text content binding" },
+        { "name": "x-html", "description": "Alpine.js inner HTML binding" },
+        { "name": "x-model", "description": "Alpine.js two-way data binding" },
+        { "name": "x-modelable", "description": "Alpine.js modelable directive" },
+        { "name": "x-for", "description": "Alpine.js loop directive" },
+        { "name": "x-transition", "description": "Alpine.js CSS transition directive" },
+        { "name": "x-transition:enter", "description": "Alpine.js transition enter class" },
+        { "name": "x-transition:enter-start", "description": "Alpine.js transition enter start state" },
+        { "name": "x-transition:enter-end", "description": "Alpine.js transition enter end state" },
+        { "name": "x-transition:leave", "description": "Alpine.js transition leave class" },
+        { "name": "x-transition:leave-start", "description": "Alpine.js transition leave start state" },
+        { "name": "x-transition:leave-end", "description": "Alpine.js transition leave end state" },
+        { "name": "x-effect", "description": "Alpine.js reactive side effect" },
+        { "name": "x-ref", "description": "Alpine.js element reference" },
+        { "name": "x-if", "description": "Alpine.js conditional rendering (template only)" },
+        { "name": "x-id", "description": "Alpine.js scoped ID generation" },
+        { "name": "x-cloak", "description": "Alpine.js hide-until-initialized directive" },
+        { "name": "x-ignore", "description": "Alpine.js ignore subtree directive" },
+        { "name": "x-teleport", "description": "Alpine.js teleport directive" },
+        { "name": "x-trap", "description": "Alpine.js focus trap directive" }
+      ]
+    }
+  }
+}

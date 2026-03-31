@@ -1,6 +1,11 @@
 package com.antlers.support.partials
 
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.search.GlobalSearchScopesCore
+import java.nio.file.Path
 
 object AntlersPartialPaths {
     private val extensions = listOf("antlers.html", "antlers.php", "blade.php", "html")
@@ -31,6 +36,15 @@ object AntlersPartialPaths {
 
                 names.flatMap { name -> extensions.map { "$name.$it" } }
             }
+    }
+
+    fun searchScope(project: Project): GlobalSearchScope {
+        val basePath = project.basePath ?: return GlobalSearchScope.projectScope(project)
+        val viewsRoot = LocalFileSystem.getInstance()
+            .findFileByNioFile(Path.of(basePath, "resources", "views"))
+
+        return viewsRoot?.let { GlobalSearchScopesCore.directoryScope(project, it, true) }
+            ?: GlobalSearchScope.projectScope(project)
     }
 
     private fun extractLookupPaths(file: VirtualFile): Set<String> {

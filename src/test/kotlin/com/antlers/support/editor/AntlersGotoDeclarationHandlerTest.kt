@@ -10,34 +10,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class AntlersGotoDeclarationHandlerTest : BasePlatformTestCase() {
 
-    fun testGotoDeclarationResolvesAlpineMethodCallToXDataDefinition() {
-        myFixture.configureByText(
-            "demo.antlers.html",
-            """
-            <div x-data="{
-                goal: '',
-                selectGoal(val) {
-                    this.goal = val
-                }
-            }">
-                <button @click="sel<caret>ectGoal('sales')">Select</button>
-            </div>
-            """.trimIndent()
-        )
-        PsiDocumentManager.getInstance(project).commitAllDocuments()
-        myFixture.doHighlighting()
-
-        val offset = myFixture.editor.caretModel.offset
-        val sourceElement = myFixture.file.findElementAt(offset)
-            ?: error("Expected source element at offset $offset")
-        val targets = AntlersGotoDeclarationHandler()
-            .getGotoDeclarationTargets(sourceElement, offset, myFixture.editor)
-
-        assertNotNull("Expected goto declaration target for Alpine method call", targets)
-        assertEquals(1, targets!!.size)
-        assertEquals("selectGoal", targets.single().text)
-    }
-
     fun testAlpineMethodResolvesThroughPsiReference() {
         myFixture.configureByText(
             "demo.antlers.html",

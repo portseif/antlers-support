@@ -20,7 +20,34 @@ class AntlersSettingsConfigurable : Configurable {
     private var phpInjection: JBCheckBox? = null
     private var semanticHighlighting: JBCheckBox? = null
 
-    override fun getDisplayName(): String = "Statamic Toolkit"
+    /**
+     * Binds a single checkbox to its corresponding [AntlersSettings.State] property.
+     * The three boilerplate methods (isModified / apply / reset) iterate this list
+     * instead of repeating the same pattern for every checkbox.
+     */
+    private data class CheckboxField(
+        val box: () -> JBCheckBox?,
+        val read: (AntlersSettings.State) -> Boolean,
+        val write: (AntlersSettings.State, Boolean) -> Unit
+    )
+
+    // Populated lazily so the box lambdas resolve after createComponent() runs.
+    private val fields: List<CheckboxField> by lazy {
+        listOf(
+            CheckboxField({ autoCloseDelimiters },  { it.enableAutoCloseDelimiters },  { s, v -> s.enableAutoCloseDelimiters  = v }),
+            CheckboxField({ autoCloseQuotes },      { it.enableAutoCloseQuotes },      { s, v -> s.enableAutoCloseQuotes      = v }),
+            CheckboxField({ semanticHighlighting }, { it.enableSemanticHighlighting }, { s, v -> s.enableSemanticHighlighting = v }),
+            CheckboxField({ tagCompletion },        { it.enableTagCompletion },        { s, v -> s.enableTagCompletion        = v }),
+            CheckboxField({ modifierCompletion },   { it.enableModifierCompletion },   { s, v -> s.enableModifierCompletion   = v }),
+            CheckboxField({ variableCompletion },   { it.enableVariableCompletion },   { s, v -> s.enableVariableCompletion   = v }),
+            CheckboxField({ partialNavigation },    { it.enablePartialNavigation },    { s, v -> s.enablePartialNavigation    = v }),
+            CheckboxField({ hoverDocumentation },   { it.enableHoverDocumentation },   { s, v -> s.enableHoverDocumentation   = v }),
+            CheckboxField({ phpInjection },         { it.enablePhpInjection },         { s, v -> s.enablePhpInjection         = v }),
+            CheckboxField({ alpineJsInjection },    { it.enableAlpineJsInjection },    { s, v -> s.enableAlpineJsInjection    = v }),
+        )
+    }
+
+    override fun getDisplayName(): String = "Statamic"
 
     override fun createComponent(): JComponent {
         autoCloseDelimiters = JBCheckBox("Auto-close {{ }} delimiters")
@@ -56,44 +83,17 @@ class AntlersSettingsConfigurable : Configurable {
     }
 
     override fun isModified(): Boolean {
-        val settings = AntlersSettings.getInstance().state
-        return autoCloseDelimiters?.isSelected != settings.enableAutoCloseDelimiters
-            || autoCloseQuotes?.isSelected != settings.enableAutoCloseQuotes
-            || tagCompletion?.isSelected != settings.enableTagCompletion
-            || modifierCompletion?.isSelected != settings.enableModifierCompletion
-            || variableCompletion?.isSelected != settings.enableVariableCompletion
-            || partialNavigation?.isSelected != settings.enablePartialNavigation
-            || hoverDocumentation?.isSelected != settings.enableHoverDocumentation
-            || alpineJsInjection?.isSelected != settings.enableAlpineJsInjection
-            || phpInjection?.isSelected != settings.enablePhpInjection
-            || semanticHighlighting?.isSelected != settings.enableSemanticHighlighting
+        val state = AntlersSettings.getInstance().state
+        return fields.any { f -> f.box()?.isSelected != f.read(state) }
     }
 
     override fun apply() {
-        val settings = AntlersSettings.getInstance().state
-        settings.enableAutoCloseDelimiters = autoCloseDelimiters?.isSelected ?: true
-        settings.enableAutoCloseQuotes = autoCloseQuotes?.isSelected ?: true
-        settings.enableTagCompletion = tagCompletion?.isSelected ?: true
-        settings.enableModifierCompletion = modifierCompletion?.isSelected ?: true
-        settings.enableVariableCompletion = variableCompletion?.isSelected ?: true
-        settings.enablePartialNavigation = partialNavigation?.isSelected ?: true
-        settings.enableHoverDocumentation = hoverDocumentation?.isSelected ?: true
-        settings.enableAlpineJsInjection = alpineJsInjection?.isSelected ?: true
-        settings.enablePhpInjection = phpInjection?.isSelected ?: true
-        settings.enableSemanticHighlighting = semanticHighlighting?.isSelected ?: true
+        val state = AntlersSettings.getInstance().state
+        fields.forEach { f -> f.write(state, f.box()?.isSelected ?: true) }
     }
 
     override fun reset() {
-        val settings = AntlersSettings.getInstance().state
-        autoCloseDelimiters?.isSelected = settings.enableAutoCloseDelimiters
-        autoCloseQuotes?.isSelected = settings.enableAutoCloseQuotes
-        tagCompletion?.isSelected = settings.enableTagCompletion
-        modifierCompletion?.isSelected = settings.enableModifierCompletion
-        variableCompletion?.isSelected = settings.enableVariableCompletion
-        partialNavigation?.isSelected = settings.enablePartialNavigation
-        hoverDocumentation?.isSelected = settings.enableHoverDocumentation
-        alpineJsInjection?.isSelected = settings.enableAlpineJsInjection
-        phpInjection?.isSelected = settings.enablePhpInjection
-        semanticHighlighting?.isSelected = settings.enableSemanticHighlighting
+        val state = AntlersSettings.getInstance().state
+        fields.forEach { f -> f.box()?.isSelected = f.read(state) }
     }
 }

@@ -16,11 +16,6 @@ import static com.antlers.support.lexer.AntlersTokenTypes.*;
 %type IElementType
 
 %{
-    private int braceDepth = 0;
-
-    private void resetBraceDepth() {
-        braceDepth = 0;
-    }
 %}
 
 // Shared character classes
@@ -57,16 +52,18 @@ WHITE = [ \t\n\r]+
     "{{$"                     { yybegin(PHP_ECHO); return PHP_ECHO_OPEN; }
 
     // Antlers expression open: {{
-    "{{"                      { resetBraceDepth(); yybegin(ANTLERS_EXPR); return ANTLERS_OPEN; }
+    "{{"                      { yybegin(ANTLERS_EXPR); return ANTLERS_OPEN; }
 
-    // HTML content: anything that is not the start of an Antlers delimiter
-    // Match one or more characters that aren't '{' or '@'
-    [^{@]+                    { return TEMPLATE_TEXT; }
+    // HTML content: produce the largest possible TEMPLATE_TEXT tokens.
+    // Fragmented tokens cause the layered HTML highlighter to restart
+    // mid-token and miscolor HTML attributes and tag names.
+    //
+    // Strategy: consume everything that can't start a delimiter sequence.
+    // A lone '{' or '@' followed by non-'{' is safe HTML content.
+    ( [^{@] | "{" [^{] | "@" [^{] )+  { return TEMPLATE_TEXT; }
 
-    // A single '{' that isn't followed by another '{'
+    // Single trailing '{' or '@' at EOF (no following char for lookahead)
     "{"                       { return TEMPLATE_TEXT; }
-
-    // A single '@' that isn't followed by '{{'
     "@"                       { return TEMPLATE_TEXT; }
 }
 
@@ -75,6 +72,7 @@ WHITE = [ \t\n\r]+
 // ============================================================
 <COMMENT> {
     "#}}"                     { yybegin(YYINITIAL); return COMMENT_CLOSE; }
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     [^#]+                     { return COMMENT_CONTENT; }
     "#" / [^}]                { return COMMENT_CONTENT; }
     "#" / "$"                 { return COMMENT_CONTENT; }
@@ -86,6 +84,7 @@ WHITE = [ \t\n\r]+
 // ============================================================
 <PHP_RAW> {
     "?}}"                     { yybegin(YYINITIAL); return PHP_RAW_CLOSE; }
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     [^?]+                     { return PHP_RAW_CONTENT; }
     "?" / [^}]                { return PHP_RAW_CONTENT; }
     "?" / "$"                 { return PHP_RAW_CONTENT; }
@@ -97,6 +96,7 @@ WHITE = [ \t\n\r]+
 // ============================================================
 <PHP_ECHO> {
     "$}}"                     { yybegin(YYINITIAL); return PHP_ECHO_CLOSE; }
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     [^$]+                     { return PHP_ECHO_CONTENT; }
     "$" / [^}]                { return PHP_ECHO_CONTENT; }
     "$" / "$"                 { return PHP_ECHO_CONTENT; }
@@ -108,6 +108,7 @@ WHITE = [ \t\n\r]+
 // ============================================================
 <NOPARSE> {
     "{{" {WHITE}? "/" {WHITE}? "noparse" {WHITE}? "}}"  { yybegin(YYINITIAL); return ANTLERS_CLOSE; }
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     [^{]+                     { return NOPARSE_CONTENT; }
     "{"                       { return NOPARSE_CONTENT; }
 }
@@ -218,6 +219,7 @@ WHITE = [ \t\n\r]+
     "@"                       { return AT; }
 
     // Anything else inside an expression
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     [^]                       { return BAD_CHARACTER; }
 }
 
@@ -236,6 +238,7 @@ WHITE = [ \t\n\r]+
     [^\"\\]+                  { return STRING_DQ; }
 
     // Single backslash followed by something other than quote or backslash
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     "\\"                      { return STRING_DQ; }
 }
 
@@ -254,5 +257,6 @@ WHITE = [ \t\n\r]+
     [^\'\\]+                  { return STRING_SQ; }
 
     // Single backslash
+    <<EOF>>                    { yybegin(YYINITIAL); return BAD_CHARACTER; }
     "\\"                      { return STRING_SQ; }
 }

@@ -8,13 +8,17 @@ class AntlersTokenType(debugName: String) : IElementType(debugName, AntlersLangu
 }
 
 object AntlersTokenTypes {
+    // Token map built once via lazy reflection — avoids per-token reflection in factory().
+    // Grammar-Kit calls factory() for every token during parsing (thousands per file).
+    private val TOKEN_MAP: Map<String, IElementType> by lazy {
+        AntlersTokenTypes::class.java.fields
+            .filter { java.lang.reflect.Modifier.isStatic(it.modifiers) && IElementType::class.java.isAssignableFrom(it.type) }
+            .associate { it.name to it.get(null) as IElementType }
+    }
+
     @JvmStatic
     fun factory(name: String): IElementType {
-        return try {
-            AntlersTokenTypes::class.java.getField(name).get(null) as IElementType
-        } catch (e: NoSuchFieldException) {
-            AntlersTokenType(name)
-        }
+        return TOKEN_MAP[name] ?: AntlersTokenType(name)
     }
 
     // Delimiters

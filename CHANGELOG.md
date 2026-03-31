@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.7.0]
+- **Go To Symbol** (Cmd+Alt+O) now includes all Antlers partial templates. Type a partial name to jump directly to the file without needing to know the full path.
+- **Navigation bar breadcrumb** shows the Antlers tag context when the caret is inside a `{{ ... }}` expression — e.g., `_card.antlers.html  >  {{ collection:blog }}` or `>  {{ if }}`.
+
+## [0.6.0]
+- **Code folding** for Antlers tag pairs (`{{ collection:blog }}...{{ /collection:blog }}`), conditional blocks (`{{ if }}...{{ endif }}`, `{{ unless }}...{{ endunless }}`), multi-line comments (`{{# ... #}}`), and `{{ noparse }}` blocks. Nested pairs fold independently.
+- **Find Usages** for Antlers tag names and modifiers — right-click any tag name or modifier and choose Find Usages to see every reference across your templates.
+- **Unknown modifier inspection** — weak warning on modifiers not found in the Statamic catalog. Toggleable under Settings > Editor > Inspections > Antlers.
+- **Unknown tag inspection** — weak warning on tag names not found in the Statamic catalog. Handles namespaced sub-tags (`nav:breadcrumbs`) correctly. Toggleable under Settings > Editor > Inspections > Antlers.
+
+## [0.5.1]
+- Alpine.js `x-transition` attributes (`:enter`, `:leave`, `:enter-start`, `:enter-end`, `:leave-start`, `:leave-end`) are now recognized — no more "namespace not bound" warnings.
+- Completion popup is faster: `LookupElement` instances for tags, modifiers, variables, and sub-tags are built once at startup and reused on every invocation instead of being reallocated per keystroke.
+- Internal performance fixes: token factory lookup is now O(1) via a lazy map instead of per-call reflection; syntax highlighter uses a pre-built token→color map instead of a linear `when`-chain; annotator skips non-identifier PSI elements before any parent or settings access.
+- Language instances for JavaScript and PHP injection are cached at class load instead of being resolved on every injection call.
+
+## [0.5.0]
+- Renamed plugin to **Statamic Toolkit**.
+- Top-level **Statamic** menu in the main menu bar (moved from Tools).
+- Improved hover documentation cards with code-styled examples and clickable doc links.
+- Separate color scheme entry for **Modifiers** (Editor > Color Scheme > Antlers).
+- Performance and stability fixes for Alpine.js reference resolution and partial navigation.
+
 ## [0.4.0]
 - PHP intelligence inside `{{? ?}}` and `{{$ $}}` blocks with syntax highlighting, completion, and formatting from your PhpStorm settings.
 - New settings panel with organized sections: Editor, Completion, Navigation & Documentation, and Language Injection.

@@ -23,7 +23,7 @@ class AntlersAlpineAttributeInjector : MultiHostInjector {
         val viewProvider = host.containingFile.viewProvider
         if (viewProvider.baseLanguage != AntlersLanguage.INSTANCE) return
 
-        val jsLanguage = Language.findLanguageByID("JavaScript") ?: return
+        val jsLanguage = JS_LANGUAGE ?: return
         val range = ElementManipulators.getValueTextRange(host)
         if (range.isEmpty) return
 
@@ -54,6 +54,7 @@ class AntlersAlpineAttributeInjector : MultiHostInjector {
     private data class InjectionSpec(val prefix: String?, val suffix: String?)
 
     companion object {
+        private val JS_LANGUAGE = Language.findLanguageByID("JavaScript")
         private val EXPRESSION = InjectionSpec("(", ")")
         private val STATEMENT = InjectionSpec(null, null)
 

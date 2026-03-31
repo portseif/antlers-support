@@ -1,5 +1,7 @@
 package com.antlers.support.injection
 
+import com.antlers.support.AntlersLanguage
+import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.openapi.util.TextRange
 import com.intellij.patterns.PlatformPatterns
@@ -9,6 +11,7 @@ import com.intellij.psi.PsiReferenceBase
 import com.intellij.psi.PsiReferenceContributor
 import com.intellij.psi.PsiReferenceProvider
 import com.intellij.util.ProcessingContext
+import com.intellij.psi.xml.XmlAttributeValue
 
 class AntlersAlpineReferenceContributor : PsiReferenceContributor() {
     override fun registerReferenceProviders(registrar: com.intellij.psi.PsiReferenceRegistrar) {
@@ -23,7 +26,7 @@ private class AntlersAlpineReferenceProvider : PsiReferenceProvider() {
     override fun getReferencesByElement(element: PsiElement, context: ProcessingContext): Array<PsiReference> {
         val referenceExpression = element as? JSReferenceExpression ?: return PsiReference.EMPTY_ARRAY
         val nameElement = referenceExpression.referenceNameElement ?: return PsiReference.EMPTY_ARRAY
-        if (AntlersAlpineReferenceResolver.resolve(referenceExpression) == null) {
+        if (!isApplicable(referenceExpression)) {
             return PsiReference.EMPTY_ARRAY
         }
 
@@ -33,6 +36,17 @@ private class AntlersAlpineReferenceProvider : PsiReferenceProvider() {
         )
 
         return arrayOf(AntlersAlpinePsiReference(referenceExpression, rangeInElement))
+    }
+
+    private fun isApplicable(referenceExpression: JSReferenceExpression): Boolean {
+        val qualifierText = referenceExpression.qualifier?.text
+        if (qualifierText != null && qualifierText != "this") return false
+
+        val injectedLanguageManager = InjectedLanguageManager.getInstance(referenceExpression.project)
+        val topLevelFile = injectedLanguageManager.getTopLevelFile(referenceExpression)
+        if (topLevelFile.viewProvider.baseLanguage != AntlersLanguage.INSTANCE) return false
+
+        return injectedLanguageManager.getInjectionHost(referenceExpression) is XmlAttributeValue
     }
 }
 

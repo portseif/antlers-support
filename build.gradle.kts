@@ -26,7 +26,8 @@ fun extractChangeNotes(changelog: File): String {
     }
 
     fun convertInlineMarkdown(text: String): String {
-        return text.replace(Regex("`(.+?)`"), "<code>$1</code>")
+        return text.replace(Regex("\\*\\*(.+?)\\*\\*"), "<b>$1</b>")
+            .replace(Regex("`(.+?)`"), "<code>$1</code>")
     }
 
     lines.forEach { line ->

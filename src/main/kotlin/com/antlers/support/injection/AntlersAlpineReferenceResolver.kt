@@ -7,6 +7,9 @@ import com.intellij.lang.javascript.psi.JSProperty
 import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.lang.javascript.psi.ecma6.impl.JSLocalImplicitElementImpl
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.psi.xml.XmlAttributeValue
 import com.intellij.psi.xml.XmlTag
@@ -70,16 +73,26 @@ object AntlersAlpineReferenceResolver {
         propertyName: String,
         injectedLanguageManager: InjectedLanguageManager
     ): JSProperty? {
-        val injectedRoot = injectedLanguageManager.getInjectedPsiFiles(xDataValue)
-            ?.firstOrNull()
-            ?.first
-            ?: return null
+        return objectLiteralFor(xDataValue, injectedLanguageManager)?.findProperty(propertyName)
+    }
 
-        val objectLiteral = PsiTreeUtil.findChildOfType(
-            injectedRoot,
-            JSObjectLiteralExpression::class.java
-        ) ?: return null
+    private fun objectLiteralFor(
+        xDataValue: XmlAttributeValue,
+        injectedLanguageManager: InjectedLanguageManager
+    ): JSObjectLiteralExpression? {
+        return CachedValuesManager.getCachedValue(xDataValue) {
+            val injectedRoot = injectedLanguageManager.getInjectedPsiFiles(xDataValue)
+                ?.firstOrNull()
+                ?.first
+            val objectLiteral = injectedRoot?.let {
+                PsiTreeUtil.findChildOfType(it, JSObjectLiteralExpression::class.java)
+            }
 
-        return objectLiteral.findProperty(propertyName)
+            CachedValueProvider.Result.create(
+                objectLiteral,
+                xDataValue,
+                PsiModificationTracker.MODIFICATION_COUNT
+            )
+        }
     }
 }

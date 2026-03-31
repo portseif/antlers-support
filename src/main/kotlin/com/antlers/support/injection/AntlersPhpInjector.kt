@@ -13,10 +13,14 @@ import com.intellij.psi.PsiLanguageInjectionHost
 
 class AntlersPhpInjector : MultiHostInjector {
 
+    companion object {
+        private val PHP_LANGUAGE = Language.findLanguageByID("PHP")
+    }
+
     override fun getLanguagesToInject(registrar: MultiHostRegistrar, context: PsiElement) {
         if (!AntlersSettings.getInstance().state.enablePhpInjection) return
 
-        val phpLanguage = Language.findLanguageByID("PHP") ?: return
+        val phpLanguage = PHP_LANGUAGE ?: return
 
         when (context) {
             is AntlersPhpRawBlock -> {

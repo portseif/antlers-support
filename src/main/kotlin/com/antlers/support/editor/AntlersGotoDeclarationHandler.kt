@@ -2,18 +2,13 @@ package com.antlers.support.editor
 
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationHandler
 import com.intellij.lang.injection.InjectedLanguageManager
-import com.intellij.lang.javascript.psi.JSReferenceExpression
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiElement
-import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FilenameIndex
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 import com.antlers.support.AntlersLanguage
-import com.antlers.support.injection.AntlersAlpineReferenceResolver
 import com.antlers.support.lexer.AntlersTokenTypes
 import com.antlers.support.partials.AntlersPartialPaths
 import com.antlers.support.settings.AntlersSettings
@@ -25,8 +20,6 @@ class AntlersGotoDeclarationHandler : GotoDeclarationHandler {
         editor: Editor
     ): Array<PsiElement>? {
         if (sourceElement == null) return null
-
-        resolveAlpineTarget(sourceElement, offset)?.let { return arrayOf(it) }
 
         val virtualFile = antlersVirtualFile(sourceElement) ?: return null
         if (!virtualFile.name.contains(".antlers.")) return null
@@ -46,45 +39,6 @@ class AntlersGotoDeclarationHandler : GotoDeclarationHandler {
         val partialPath = resolvePartialPath(antlersElement) ?: return null
         val targets = findPartialFiles(project, partialPath)
         return if (targets.isNotEmpty()) targets.toTypedArray() else null
-    }
-
-    private fun resolveAlpineTarget(sourceElement: PsiElement, offset: Int): PsiElement? {
-        val injectedLanguageManager = InjectedLanguageManager.getInstance(sourceElement.project)
-        val topLevelFile = injectedLanguageManager.getTopLevelFile(sourceElement)
-        if (topLevelFile.viewProvider.baseLanguage != AntlersLanguage.INSTANCE) return null
-
-        val injectedElement = alpineInjectedElementAt(
-            sourceElement,
-            topLevelFile,
-            offset,
-            injectedLanguageManager
-        ) ?: return null
-
-        val reference = PsiTreeUtil.getParentOfType(
-            injectedElement,
-            JSReferenceExpression::class.java,
-            false
-        ) ?: return null
-
-        return AntlersAlpineReferenceResolver.resolve(reference)
-    }
-
-    private fun alpineInjectedElementAt(
-        sourceElement: PsiElement,
-        topLevelFile: PsiFile,
-        offset: Int,
-        injectedLanguageManager: InjectedLanguageManager
-    ): PsiElement? {
-        if (injectedLanguageManager.isInjectedFragment(sourceElement.containingFile)) {
-            return sourceElement
-        }
-
-        val viewProvider = topLevelFile.viewProvider
-        val templateLanguage = viewProvider.languages.firstOrNull { it != viewProvider.baseLanguage } ?: return null
-        val templateDataFile = viewProvider.getPsi(templateLanguage)
-
-        return templateDataFile?.let { injectedLanguageManager.findInjectedElementAt(it, offset) }
-            ?: injectedLanguageManager.findInjectedElementAt(topLevelFile, offset)
     }
 
     private fun antlersVirtualFile(sourceElement: PsiElement): VirtualFile? {
@@ -146,23 +100,13 @@ class AntlersGotoDeclarationHandler : GotoDeclarationHandler {
     private fun findPartialFiles(project: Project, partialPath: String): List<PsiElement> {
         val psiManager = PsiManager.getInstance(project)
         val results = mutableListOf<PsiElement>()
-        val scope = GlobalSearchScope.allScope(project)
+        val scope = AntlersPartialPaths.searchScope(project)
 
         // Search by exact filename with path matching
         for (fullFileName in AntlersPartialPaths.candidateFileNames(partialPath)) {
             val files = FilenameIndex.getVirtualFilesByName(fullFileName, scope)
             for (file in files) {
                 if (matchesPartialPath(file, partialPath)) {
-                    psiManager.findFile(file)?.let { results.add(it) }
-                }
-            }
-        }
-
-        // Fallback: match by filename only (no path check)
-        if (results.isEmpty()) {
-            for (fullFileName in AntlersPartialPaths.candidateFileNames(partialPath)) {
-                val files = FilenameIndex.getVirtualFilesByName(fullFileName, scope)
-                for (file in files) {
                     psiManager.findFile(file)?.let { results.add(it) }
                 }
             }

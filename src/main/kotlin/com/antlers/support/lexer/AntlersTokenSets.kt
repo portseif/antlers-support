@@ -86,6 +86,11 @@ object AntlersTokenSets {
     )
 
     @JvmField
+    val IDENTIFIERS: TokenSet = TokenSet.create(
+        AntlersTokenTypes.IDENTIFIER
+    )
+
+    @JvmField
     val DELIMITERS: TokenSet = TokenSet.create(
         AntlersTokenTypes.ANTLERS_OPEN,
         AntlersTokenTypes.ANTLERS_CLOSE,

@@ -12,59 +12,72 @@ class AntlersSyntaxHighlighter : SyntaxHighlighterBase() {
     override fun getHighlightingLexer(): Lexer = AntlersLexerAdapter()
 
     override fun getTokenHighlights(tokenType: IElementType): Array<TextAttributesKey> {
-        return when {
+        return HIGHLIGHTS[tokenType]
+            ?: when {
+                AntlersTokenSets.KEYWORDS.contains(tokenType) -> KEYWORD_KEYS
+                AntlersTokenSets.NUMBERS.contains(tokenType) -> NUMBER_KEYS
+                AntlersTokenSets.OPERATORS.contains(tokenType) -> OPERATOR_KEYS
+                else -> TextAttributesKey.EMPTY_ARRAY
+            }
+    }
+
+    companion object {
+        // Pre-built keys arrays (allocated once)
+        private val DELIMITER_KEYS = pack(AntlersHighlighterColors.DELIMITER)
+        private val COMMENT_KEYS = pack(AntlersHighlighterColors.COMMENT)
+        private val PHP_CONTENT_KEYS = pack(AntlersHighlighterColors.PHP_CONTENT)
+        private val KEYWORD_KEYS = pack(AntlersHighlighterColors.KEYWORD)
+        private val IDENTIFIER_KEYS = pack(AntlersHighlighterColors.IDENTIFIER)
+        private val STRING_KEYS = pack(AntlersHighlighterColors.STRING)
+        private val NUMBER_KEYS = pack(AntlersHighlighterColors.NUMBER)
+        private val PIPE_KEYS = pack(AntlersHighlighterColors.PIPE)
+        private val OPERATOR_KEYS = pack(AntlersHighlighterColors.OPERATOR)
+        private val PUNCTUATION_KEYS = pack(AntlersHighlighterColors.PUNCTUATION)
+        private val BAD_CHARACTER_KEYS = pack(AntlersHighlighterColors.BAD_CHARACTER)
+
+        // O(1) map lookup for specific token types.
+        // TokenSet-based lookups (keywords, numbers, operators) fall through to the when block.
+        private val HIGHLIGHTS: Map<IElementType, Array<TextAttributesKey>> = buildMap {
             // Delimiters
-            tokenType == AntlersTokenTypes.ANTLERS_OPEN ||
-            tokenType == AntlersTokenTypes.ANTLERS_CLOSE ||
-            tokenType == AntlersTokenTypes.TAG_SELF_CLOSE -> pack(AntlersHighlighterColors.DELIMITER)
+            put(AntlersTokenTypes.ANTLERS_OPEN, DELIMITER_KEYS)
+            put(AntlersTokenTypes.ANTLERS_CLOSE, DELIMITER_KEYS)
+            put(AntlersTokenTypes.TAG_SELF_CLOSE, DELIMITER_KEYS)
+            put(AntlersTokenTypes.PHP_RAW_OPEN, DELIMITER_KEYS)
+            put(AntlersTokenTypes.PHP_RAW_CLOSE, DELIMITER_KEYS)
+            put(AntlersTokenTypes.PHP_ECHO_OPEN, DELIMITER_KEYS)
+            put(AntlersTokenTypes.PHP_ECHO_CLOSE, DELIMITER_KEYS)
 
             // Comments
-            tokenType == AntlersTokenTypes.COMMENT_OPEN ||
-            tokenType == AntlersTokenTypes.COMMENT_CLOSE ||
-            tokenType == AntlersTokenTypes.COMMENT_CONTENT -> pack(AntlersHighlighterColors.COMMENT)
+            put(AntlersTokenTypes.COMMENT_OPEN, COMMENT_KEYS)
+            put(AntlersTokenTypes.COMMENT_CLOSE, COMMENT_KEYS)
+            put(AntlersTokenTypes.COMMENT_CONTENT, COMMENT_KEYS)
 
-            // PHP regions
-            tokenType == AntlersTokenTypes.PHP_RAW_OPEN ||
-            tokenType == AntlersTokenTypes.PHP_RAW_CLOSE ||
-            tokenType == AntlersTokenTypes.PHP_ECHO_OPEN ||
-            tokenType == AntlersTokenTypes.PHP_ECHO_CLOSE -> pack(AntlersHighlighterColors.DELIMITER)
-
-            tokenType == AntlersTokenTypes.PHP_RAW_CONTENT ||
-            tokenType == AntlersTokenTypes.PHP_ECHO_CONTENT -> pack(AntlersHighlighterColors.PHP_CONTENT)
-
-            // Keywords
-            AntlersTokenSets.KEYWORDS.contains(tokenType) -> pack(AntlersHighlighterColors.KEYWORD)
+            // PHP content
+            put(AntlersTokenTypes.PHP_RAW_CONTENT, PHP_CONTENT_KEYS)
+            put(AntlersTokenTypes.PHP_ECHO_CONTENT, PHP_CONTENT_KEYS)
 
             // Identifiers
-            tokenType == AntlersTokenTypes.IDENTIFIER -> pack(AntlersHighlighterColors.IDENTIFIER)
+            put(AntlersTokenTypes.IDENTIFIER, IDENTIFIER_KEYS)
 
             // Strings
-            tokenType == AntlersTokenTypes.STRING_DQ ||
-            tokenType == AntlersTokenTypes.STRING_SQ -> pack(AntlersHighlighterColors.STRING)
+            put(AntlersTokenTypes.STRING_DQ, STRING_KEYS)
+            put(AntlersTokenTypes.STRING_SQ, STRING_KEYS)
 
-            // Numbers
-            AntlersTokenSets.NUMBERS.contains(tokenType) -> pack(AntlersHighlighterColors.NUMBER)
+            // Pipe
+            put(AntlersTokenTypes.OP_PIPE, PIPE_KEYS)
 
-            // Pipe modifier
-            tokenType == AntlersTokenTypes.OP_PIPE -> pack(AntlersHighlighterColors.PIPE)
-
-            // Operators
-            AntlersTokenSets.OPERATORS.contains(tokenType) -> pack(AntlersHighlighterColors.OPERATOR)
-
-            // Punctuation (colon, dot, comma, semicolon, brackets)
-            tokenType == AntlersTokenTypes.COLON ||
-            tokenType == AntlersTokenTypes.DOT ||
-            tokenType == AntlersTokenTypes.COMMA ||
-            tokenType == AntlersTokenTypes.SEMICOLON ||
-            tokenType == AntlersTokenTypes.LPAREN ||
-            tokenType == AntlersTokenTypes.RPAREN ||
-            tokenType == AntlersTokenTypes.LBRACKET ||
-            tokenType == AntlersTokenTypes.RBRACKET -> pack(AntlersHighlighterColors.PUNCTUATION)
+            // Punctuation
+            put(AntlersTokenTypes.COLON, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.DOT, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.COMMA, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.SEMICOLON, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.LPAREN, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.RPAREN, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.LBRACKET, PUNCTUATION_KEYS)
+            put(AntlersTokenTypes.RBRACKET, PUNCTUATION_KEYS)
 
             // Bad character
-            tokenType == AntlersTokenTypes.BAD_CHARACTER -> pack(AntlersHighlighterColors.BAD_CHARACTER)
-
-            else -> TextAttributesKey.EMPTY_ARRAY
+            put(AntlersTokenTypes.BAD_CHARACTER, BAD_CHARACTER_KEYS)
         }
     }
 }

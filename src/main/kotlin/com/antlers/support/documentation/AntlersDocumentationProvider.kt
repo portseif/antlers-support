@@ -137,7 +137,7 @@ class AntlersDocumentationProvider : AbstractDocumentationProvider() {
             addSection(
                 builder,
                 "Example",
-                "<pre>${StringUtil.escapeXmlEntities(it)}</pre>"
+                "<pre><code>${StringUtil.escapeXmlEntities(it)}</code></pre>"
             )
         }
         builder.append(DocumentationMarkup.SECTIONS_END)

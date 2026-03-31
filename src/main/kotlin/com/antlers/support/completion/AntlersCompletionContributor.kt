@@ -4,7 +4,6 @@ import com.intellij.codeInsight.completion.*
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.search.FilenameIndex
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.ProcessingContext
 import com.antlers.support.AntlersIcons
@@ -35,17 +34,10 @@ private class AntlersCompletionProvider : CompletionProvider<CompletionParameter
         val prevLeaf = PsiTreeUtil.prevVisibleLeaf(position)
         val prevType = prevLeaf?.node?.elementType
 
-        // After | pipe — suggest modifiers
+        // After | pipe — suggest modifiers (pre-built, no allocations)
         if (prevType == AntlersTokenTypes.OP_PIPE) {
             if (!settings.enableModifierCompletion) return
-            StatamicData.MODIFIERS.forEach { item ->
-                result.addElement(
-                    LookupElementBuilder.create(item.name)
-                        .withTypeText(item.description, true)
-                        .withIcon(AntlersIcons.FILE)
-                        .bold()
-                )
-            }
+            result.addAllElements(StatamicData.MODIFIER_ELEMENTS)
             return
         }
 
@@ -60,47 +52,29 @@ private class AntlersCompletionProvider : CompletionProvider<CompletionParameter
                 return
             }
 
-            // After tag: — suggest sub-tags
+            // After tag: — suggest sub-tags (pre-built per namespace)
             if (tagName != null && settings.enableTagCompletion) {
-                val subTags = StatamicData.getSubTags(tagName)
-                if (subTags.isNotEmpty()) {
-                    subTags.forEach { item ->
-                        result.addElement(
-                            LookupElementBuilder.create(item.name)
-                                .withTypeText(item.description, true)
-                                .withIcon(AntlersIcons.FILE)
-                        )
-                    }
+                val subTagElements = StatamicData.getSubTagElements(tagName)
+                if (subTagElements.isNotEmpty()) {
+                    result.addAllElements(subTagElements)
                     return
                 }
             }
         }
 
-        // General completions: tags + variables
+        // General completions: tags + variables (pre-built, no allocations)
         if (settings.enableTagCompletion) {
-            StatamicData.TAGS.forEach { item ->
-                result.addElement(
-                    LookupElementBuilder.create(item.name)
-                        .withTypeText(item.description, true)
-                        .withIcon(AntlersIcons.FILE)
-                        .bold()
-                )
-            }
+            result.addAllElements(StatamicData.TAG_ELEMENTS)
         }
 
         if (settings.enableVariableCompletion) {
-            StatamicData.VARIABLES.forEach { item ->
-                result.addElement(
-                    LookupElementBuilder.create(item.name)
-                        .withTypeText(item.description, true)
-                )
-            }
+            result.addAllElements(StatamicData.VARIABLE_ELEMENTS)
         }
     }
 
     private fun addPartialCompletions(parameters: CompletionParameters, result: CompletionResultSet) {
         val project = parameters.position.project
-        val scope = GlobalSearchScope.allScope(project)
+        val scope = AntlersPartialPaths.searchScope(project)
         val seen = mutableSetOf<String>()
 
         for (ext in AntlersPartialPaths.extensions()) {

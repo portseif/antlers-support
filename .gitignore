@@ -13,6 +13,9 @@ out/
 # Generated
 src/main/gen/
 
+# SDK Reference Docs (local only)
+docs/
+
 # OS
 .DS_Store
 Thumbs.db

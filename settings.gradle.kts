@@ -1,4 +1,4 @@
-rootProject.name = "antlers-support"
+rootProject.name = "statamic-toolkit"
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"

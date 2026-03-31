@@ -36,6 +36,9 @@ object AntlersHighlighterColors {
     val PHP_CONTENT: TextAttributesKey =
         createTextAttributesKey("ANTLERS_PHP_CONTENT", DefaultLanguageHighlighterColors.TEMPLATE_LANGUAGE_COLOR)
 
+    val MODIFIER: TextAttributesKey =
+        createTextAttributesKey("ANTLERS_MODIFIER", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
+
     val PARAMETER: TextAttributesKey =
         createTextAttributesKey("ANTLERS_PARAMETER", DefaultLanguageHighlighterColors.METADATA)
 

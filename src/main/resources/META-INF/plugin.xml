@@ -1,7 +1,7 @@
 <idea-plugin>
-    <id>com.antlers.support</id>
+    <id>com.statamic.toolkit</id>
     <name>Statamic Toolkit</name>
-    <vendor url="https://github.com/portseif/antlers-support" email="chris@portseif.io">Chris Seifert</vendor>
+    <vendor url="https://github.com/portseif/statamic-toolkit-phpstorm" email="chris@portseif.io">Chris Seifert</vendor>
 
     <description><![CDATA[
         <p>Syntax highlighting and editor support for the
@@ -22,7 +22,7 @@
             <li>Block commenting with <code>{{# #}}</code></li>
             <li>Alpine.js support: JS intelligence in <code>x-data</code>, <code>x-on</code>, <code>@click</code>, etc.</li>
             <li>Code formatting for Antlers expressions</li>
-            <li>Configurable settings (Settings &gt; Languages &amp; Frameworks &gt; Antlers)</li>
+            <li>Configurable settings (Settings &gt; Languages &amp; Frameworks &gt; Statamic)</li>
             <li>Tools menu actions for Statamic content query snippets, controller scaffolds, tag scaffolds, and modifier scaffolds</li>
         </ul>
 
@@ -133,12 +133,49 @@
             language="Antlers"
             implementationClass="com.antlers.support.formatting.AntlersFormattingModelBuilder"/>
 
-        <!-- Plugin Settings (Settings > Languages & Frameworks > Antlers) -->
+        <!-- Code Folding (tag pairs, conditionals, comments) -->
+        <lang.foldingBuilder
+            language="Antlers"
+            implementationClass="com.antlers.support.folding.AntlersFoldingBuilder"/>
+
+        <!-- Find Usages (tag names, modifiers) -->
+        <lang.findUsagesProvider
+            language="Antlers"
+            implementationClass="com.antlers.support.editor.AntlersFindUsagesProvider"/>
+
+        <!-- Go To Symbol — navigate to partials by name via Cmd+Alt+O -->
+        <gotoSymbolContributor
+            implementation="com.antlers.support.navigation.AntlersGotoSymbolContributor"/>
+
+        <!-- Structure-aware breadcrumb navbar — shows tag context inside {{ }} -->
+        <navbar
+            implementation="com.antlers.support.navigation.AntlersStructureAwareNavbar"/>
+
+        <!-- Inspections -->
+        <localInspection
+            language="Antlers"
+            shortName="AntlersUnknownModifier"
+            displayName="Unknown Antlers modifier"
+            groupName="Antlers"
+            enabledByDefault="true"
+            level="WEAK WARNING"
+            implementationClass="com.antlers.support.inspections.AntlersUnknownModifierInspection"/>
+
+        <localInspection
+            language="Antlers"
+            shortName="AntlersUnknownTag"
+            displayName="Unknown Antlers tag"
+            groupName="Antlers"
+            enabledByDefault="true"
+            level="WEAK WARNING"
+            implementationClass="com.antlers.support.inspections.AntlersUnknownTagInspection"/>
+
+        <!-- Plugin Settings (Settings > Languages & Frameworks > Statamic) -->
         <applicationConfigurable
             parentId="language"
             instance="com.antlers.support.settings.AntlersSettingsConfigurable"
-            id="com.antlers.support.settings"
-            displayName="Statamic Toolkit"/>
+            id="com.statamic.toolkit.settings"
+            displayName="Statamic"/>
 
         <applicationService
             serviceImplementation="com.antlers.support.settings.AntlersSettings"/>
@@ -150,6 +187,10 @@
         <langCodeStyleSettingsProvider
             implementation="com.antlers.support.settings.AntlersLanguageCodeStyleSettingsProvider"/>
 
+        <!-- Alpine.js Web Types (suppresses "Namespace is not bound" for x-transition:* etc.) -->
+        <webSymbols.webTypes source="web-types/alpine-js.web-types.json"
+                             enableByDefault="true"/>
+
     </extensions>
 
     <actions>
@@ -158,7 +199,7 @@
                text="Statamic"
                description="Statamic and Antlers productivity actions"
                popup="true">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <add-to-group group-id="MainMenu" anchor="last"/>
 
             <group id="com.antlers.support.actions.ContentQueriesGroup"
                    class="com.antlers.support.actions.StatamicPhpInsertActionGroup"

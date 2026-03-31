@@ -17,7 +17,7 @@ Grammar-Kit code generation (lexer from `.flex`, parser from `.bnf`) runs automa
 
 **Statamic Toolkit** is a JetBrains IDE plugin for the [Antlers](https://statamic.dev/frontend/antlers) template language (Statamic CMS). It provides syntax highlighting, code completion, and editor features for `.antlers.html` and `.antlers.php` files, and the current development target is **PhpStorm** (`platformType=PS` in `gradle.properties`).
 
-The plugin name is **Statamic Toolkit** (marketplace display name), but the language is **Antlers**. All language-level registrations (file type, parser, highlighter, code style) use "Antlers". Only the plugin name and settings panel use "Statamic Toolkit".
+The plugin name is **Statamic Toolkit** (marketplace display name), but the language is **Antlers**. All language-level registrations (file type, parser, highlighter, color scheme, code style) use "Antlers". The settings panel under Languages & Frameworks uses **Statamic**.
 
 ### Dual PSI Tree (Template Language Framework)
 
@@ -58,6 +58,8 @@ Alpine support is implemented with a `MultiHostInjector` (`AntlersAlpineAttribut
 - `x-for` is **not** injected as JavaScript because Alpine's `(item, index) in items` syntax is not valid JS and causes parser noise.
 - `x-for` loop aliases are instead resolved manually in the Alpine reference resolver so descendant expressions can still navigate and avoid false unresolved warnings.
 - Cmd-click on Alpine method calls should resolve through normal PSI references first; `AntlersGotoDeclarationHandler` remains as a fallback path for Antlers-specific navigation like partials.
+- `AntlersAlpineReferenceContributor` must stay cheap: do not eagerly call the full resolver from `getReferencesByElement()`. Reference creation happens often enough that double-resolution can become an editor freeze amplifier.
+- `AntlersAlpineReferenceResolver` caches the injected `x-data` object literal lookup per `XmlAttributeValue`. Re-materializing injected PSI while walking ancestors is expensive and should be avoided.
 
 ### PHP Injection
 
@@ -72,6 +74,16 @@ PHP intelligence inside `{{? ?}}` (raw PHP) and `{{$ $}}` (echo PHP) blocks is i
 ### Formatting
 
 Formatting uses `TemplateLanguageFormattingModelBuilder`, not a plain formatting model builder. `AntlersFormattingModelBuilder` must special-case `OuterLanguageElementType` nodes and delegate those back to `SimpleTemplateLanguageFormattingModelBuilder`; otherwise mixed-template formatting breaks around template data boundaries.
+
+### Performance / Stability Guardrails
+
+The plugin has a few editor hot paths where small mistakes are enough to freeze PhpStorm:
+
+- Partial navigation and completion must use a narrow search scope (`AntlersPartialPaths.searchScope(project)`) rooted at `resources/views`, not `GlobalSearchScope.allScope(project)`.
+- Do not add fallback `FilenameIndex` scans that search the whole project by filename only from goto handlers. Those can run on UI-triggered paths and are a realistic freeze source in large projects.
+- JFlex states with custom start conditions need explicit `<<EOF>>` handling. Truncated Antlers blocks should reset to `YYINITIAL` and return `BAD_CHARACTER` instead of leaving the lexer in a bad state.
+- `AntlersFileViewProvider.supportsIncrementalReparse()` is still `false` on purpose. Do not flip it to `true` without a reproducible case and validation against mixed Antlers/HTML PSI correctness.
+- If the IDE freezes again, prefer collecting a thread dump or CPU snapshot before making more speculative performance changes.
 
 ### Statamic Catalog and Documentation
 
@@ -89,9 +101,9 @@ This generated catalog powers:
 
 Variable vs. tag hover resolution is intentionally conservative: simple bare identifiers with no parameters can resolve as variables, while namespaced forms like `nav:foo` or `current_user:email` fall back to root tag/variable handles as needed.
 
-### Tools Menu Actions
+### Statamic Menu
 
-The plugin now exposes a `Tools > Statamic` menu for PHP-side Statamic workflows.
+The plugin exposes a top-level **Statamic** menu in the main menu bar for PHP-side Statamic workflows.
 
 - Content query snippets insert code at the caret and are only enabled when the active editor is a PHP file.
 - The `Content Queries` submenu itself should still stay visible in Laravel/Statamic projects even when the current tab is Antlers, so the menu does not look broken.
@@ -102,7 +114,7 @@ Project-aware menu visibility is handled by lightweight action groups (`Statamic
 
 ### Settings
 
-Feature toggles live in `AntlersSettings` (application-level `PersistentStateComponent`) and are exposed in the settings panel at Settings > Languages & Frameworks > Antlers via `AntlersSettingsConfigurable`.
+Feature toggles live in `AntlersSettings` (application-level `PersistentStateComponent`) and are exposed in the settings panel at Settings > Languages & Frameworks > Statamic via `AntlersSettingsConfigurable`.
 
 Every major feature should have a toggle. When adding a new toggleable feature:
 1. Add a `var enableXxx: Boolean = true` field to `AntlersSettings.State`

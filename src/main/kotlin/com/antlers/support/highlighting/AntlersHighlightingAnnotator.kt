@@ -14,6 +14,10 @@ import com.intellij.psi.PsiElement
 
 class AntlersHighlightingAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
+        // Fast exit: only IDENTIFIER tokens can be tag names, modifiers, or parameters.
+        // This skips 90%+ of elements (whitespace, delimiters, operators, HTML) before
+        // hitting the settings lookup or .parent access.
+        if (element.node?.elementType != AntlersTokenTypes.IDENTIFIER) return
         if (!AntlersSettings.getInstance().state.enableSemanticHighlighting) return
         when (val parent = element.parent) {
             is AntlersTagName -> {
@@ -23,7 +27,7 @@ class AntlersHighlightingAnnotator : Annotator {
             }
             is AntlersModifier -> {
                 if (parent.identifier == element) {
-                    applyHighlight(holder, element, AntlersHighlighterColors.TAG_NAME)
+                    applyHighlight(holder, element, AntlersHighlighterColors.MODIFIER)
                 }
             }
 
