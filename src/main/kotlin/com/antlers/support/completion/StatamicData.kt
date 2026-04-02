@@ -2,6 +2,8 @@ package com.antlers.support.completion
 
 import com.antlers.support.AntlersIcons
 import com.antlers.support.statamic.StatamicCatalog
+import com.antlers.support.statamic.StatamicTagParameters
+import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 
@@ -82,4 +84,30 @@ object StatamicData {
 
     fun getSubTagElements(tagName: String): List<LookupElement> =
         SUB_TAG_ELEMENT_MAP[tagName].orEmpty()
+
+    /** Pre-built parameter elements keyed by root tag name. */
+    private val PARAMETER_ELEMENT_MAP: Map<String, List<LookupElement>> by lazy {
+        val result = mutableMapOf<String, List<LookupElement>>()
+        for ((tagName, params) in StatamicTagParameters.allEntries()) {
+            result[tagName] = params.map { param ->
+                LookupElementBuilder.create(param.name)
+                    .withTypeText(param.description, true)
+                    .withIcon(AntlersIcons.FILE)
+                    .withInsertHandler { context: InsertionContext, _ ->
+                        val editor = context.editor
+                        val document = editor.document
+                        val offset = context.tailOffset
+                        document.insertString(offset, "=\"\"")
+                        editor.caretModel.moveToOffset(offset + 2)
+                    }
+                    .let { if (param.required) it.bold() else it }
+            }
+        }
+        result
+    }
+
+    fun getParameterElements(tagName: String): List<LookupElement> {
+        val rootName = tagName.substringBefore(':')
+        return PARAMETER_ELEMENT_MAP[rootName].orEmpty()
+    }
 }

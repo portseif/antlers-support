@@ -10,50 +10,73 @@ import com.antlers.support.settings.AntlersSettings
 import com.intellij.lang.annotation.AnnotationHolder
 import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiElement
 
 class AntlersHighlightingAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
-        // Fast exit: only IDENTIFIER tokens can be tag names, modifiers, or parameters.
-        // This skips 90%+ of elements (whitespace, delimiters, operators, HTML) before
-        // hitting the settings lookup or .parent access.
-        if (element.node?.elementType != AntlersTokenTypes.IDENTIFIER) return
         if (!AntlersSettings.getInstance().state.enableSemanticHighlighting) return
-        when (val parent = element.parent) {
-            is AntlersTagName -> {
-                if (shouldHighlightTagHead(element, parent)) {
-                    applyHighlight(holder, element, AntlersHighlighterColors.TAG_NAME)
-                }
-            }
-            is AntlersModifier -> {
-                if (parent.identifier == element) {
-                    applyHighlight(holder, element, AntlersHighlighterColors.MODIFIER)
-                }
-            }
 
-            is AntlersParameter -> {
-                if (element.textRange.endOffset <= parent.opAssign.textRange.startOffset) {
-                    applyHighlight(holder, element, AntlersHighlighterColors.PARAMETER)
+        val elementType = element.node?.elementType ?: return
+
+        // Highlight identifiers inside tag names, modifiers, and parameters
+        if (elementType == AntlersTokenTypes.IDENTIFIER) {
+            when (val parent = element.parent) {
+                is AntlersTagName -> highlightTagNamePart(element, parent, holder)
+                is AntlersModifier -> {
+                    if (parent.identifier == element) {
+                        applyHighlight(holder, element, AntlersHighlighterColors.MODIFIER)
+                    }
+                }
+                is AntlersParameter -> {
+                    if (element.textRange.endOffset <= parent.opAssign.textRange.startOffset) {
+                        applyHighlight(holder, element, AntlersHighlighterColors.PARAMETER)
+                    }
+                }
+            }
+        }
+
+        // Highlight : and / inside tag names with tag color
+        if (elementType == AntlersTokenTypes.COLON || elementType == AntlersTokenTypes.OP_DIVIDE) {
+            val parent = element.parent
+            if (parent is AntlersTagName && isTagLike(parent)) {
+                val fullText = parent.text ?: return
+                if (isPartialPath(fullText)) {
+                    applyHighlight(holder, element, AntlersHighlighterColors.TAG_PATH)
+                } else {
+                    applyHighlight(holder, element, AntlersHighlighterColors.TAG_NAME)
                 }
             }
         }
     }
 
-    private fun applyHighlight(
-        holder: AnnotationHolder,
-        element: PsiElement,
-        attributesKey: com.intellij.openapi.editor.colors.TextAttributesKey
-    ) {
-        holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
-            .range(element)
-            .textAttributes(attributesKey)
-            .create()
+    private fun highlightTagNamePart(element: PsiElement, tagName: AntlersTagName, holder: AnnotationHolder) {
+        // Only highlight tag names that look like actual tags (namespaced, have params, or closing)
+        // This avoids coloring simple variables like {{ url }} or {{ title }}
+        if (!isTagLike(tagName)) return
+
+        val fullText = tagName.text ?: return
+        val isHead = element.prevSibling == null
+
+        if (isPartialPath(fullText)) {
+            // Head gets tag color, path parts get underlined tag color
+            if (isHead) {
+                applyHighlight(holder, element, AntlersHighlighterColors.TAG_NAME)
+            } else {
+                applyHighlight(holder, element, AntlersHighlighterColors.TAG_PATH)
+            }
+        } else {
+            // All parts of namespaced/parameterized tag names get the tag color
+            applyHighlight(holder, element, AntlersHighlighterColors.TAG_NAME)
+        }
     }
 
-    private fun shouldHighlightTagHead(element: PsiElement, tagName: AntlersTagName): Boolean {
-        if (element.node?.elementType != AntlersTokenTypes.IDENTIFIER) return false
-        if (element.prevSibling != null) return false
-
+    /**
+     * Determines if a tag name should be highlighted as a tag (not a variable).
+     * Tags are distinguished by being: closing tags, having parameters, containing
+     * a namespace (:), or containing a path separator (/).
+     */
+    private fun isTagLike(tagName: AntlersTagName): Boolean {
         return when (val container = tagName.parent) {
             is AntlersClosingTag -> true
             is AntlersTagExpression -> {
@@ -61,8 +84,23 @@ class AntlersHighlightingAnnotator : Annotator {
                     tagName.text.contains(':') ||
                     tagName.text.contains('/')
             }
-
             else -> false
         }
+    }
+
+    private fun isPartialPath(tagNameText: String): Boolean {
+        return tagNameText.startsWith("partial:") ||
+            tagNameText.startsWith("partial/")
+    }
+
+    private fun applyHighlight(
+        holder: AnnotationHolder,
+        element: PsiElement,
+        attributesKey: TextAttributesKey
+    ) {
+        holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
+            .range(element)
+            .textAttributes(attributesKey)
+            .create()
     }
 }

@@ -14,6 +14,7 @@ class AntlersColorSettingsPage : ColorSettingsPage {
             AttributesDescriptor("Delimiters", AntlersHighlighterColors.DELIMITER),
             AttributesDescriptor("Keywords", AntlersHighlighterColors.KEYWORD),
             AttributesDescriptor("Tag Names", AntlersHighlighterColors.TAG_NAME),
+            AttributesDescriptor("Partial Paths", AntlersHighlighterColors.TAG_PATH),
             AttributesDescriptor("Modifiers", AntlersHighlighterColors.MODIFIER),
             AttributesDescriptor("Parameters", AntlersHighlighterColors.PARAMETER),
             AttributesDescriptor("Identifiers", AntlersHighlighterColors.IDENTIFIER),

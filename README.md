@@ -16,13 +16,21 @@ A JetBrains IDE plugin providing syntax highlighting and editor support for the 
 - **PHP Intelligence** -- full PHP support inside `{{? ?}}` and `{{$ $}}` blocks with highlighting, completion, and formatting from your PhpStorm settings
 - **Alpine.js Support** -- JavaScript intelligence inside Alpine attributes (`x-data`, `@click`, `x-bind`, etc.) with method navigation back to `x-data`
 - **Partial Navigation** -- Cmd-click on `partial:name` to jump to the partial file
-- **Structure View** -- outline of Antlers tags in the Structure tool window
-- **Formatting** -- template-aware formatting for mixed Antlers/HTML files
+- **Antlers Language Server** -- integrated Stillat LSP for formatting and diagnostics (bundled, requires Node.js)
+- **Tag Parameter Completion** -- suggests official parameters (`from=`, `limit=`, `sort=`, etc.) for common Statamic tags
+- **Scope-Aware Variables** -- suggests `title`, `slug`, `url`, `first`, `last`, `count`, etc. inside collection/nav/taxonomy loops
+- **Collection Handle Completion** -- `{{ collection: }}` suggests handles from flat-file or Eloquent driver (queries database via artisan)
+- **Go-To Custom Tags/Modifiers** -- Cmd-click navigates to PHP classes in `app/Tags/` and `app/Modifiers/`
+- **Extract to Partial** -- select code, Alt+Enter to extract into a new partial file
+- **Structure View** -- Antlers tags + HTML landmarks (`<header>`, `<main>`, `<section>`, etc.) in document order with nested tag pair children
+- **Formatting** -- template-aware formatting with block tag indentation for `collection`, `nav`, `cache`, `foreach`, `entries`, `groups`, `items`, and more
+- **Auto-Close Tags** -- typing `{{ /` auto-completes the closing tag name; Enter after block tags auto-indents
 - **Brace Matching** -- highlights matching `{{ }}` pairs
 - **Block Commenting** -- toggle comments with `{{# #}}` via Ctrl+/ (Cmd+/)
 - **Typing Aids** -- auto-closing braces, smart quotes, and smart enter handling
+- **Status Bar Widget** -- shows Statamic indexing status with resource counts, driver detection, and auto-index toggle
 - **Statamic Menu** -- top-level menu with controller, tag, and modifier generators plus content query snippets
-- **Customizable Colors** -- Settings > Editor > Color Scheme > Antlers
+- **Customizable Colors** -- Settings > Editor > Color Scheme > Antlers, including underlined partial paths
 
 ## Supported Syntax
 
@@ -83,8 +91,16 @@ This launches a sandboxed IDE instance with the plugin installed.
 - [x] Hover documentation
 - [x] Statamic generators (controllers, tags, modifiers)
 - [x] Configurable settings panel
-- [ ] Code folding for tag pairs
+- [x] Code folding for tag pairs
+- [x] Tag parameter completion
+- [x] Scope-aware variable completion
+- [x] Go-to custom tag/modifier definition
+- [x] Extract to partial refactoring
+- [x] Antlers Language Server integration
+- [x] Eloquent driver support
+- [x] Status bar indexing widget
 - [ ] Live templates / snippets
+- [ ] Blueprint field completion
 
 ## Disclaimer
 

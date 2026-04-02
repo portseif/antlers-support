@@ -1,5 +1,6 @@
 package com.antlers.support.formatting
 
+import com.antlers.support.AntlersBlockTags
 import com.antlers.support.AntlersLanguage
 import com.antlers.support.psi.AntlersAntlersTag
 import com.intellij.openapi.util.TextRange
@@ -27,7 +28,9 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
 
     private fun processRange(file: PsiFile, range: TextRange, settings: CodeStyleSettings) {
         val project = file.project
-        val document = PsiDocumentManager.getInstance(project).getDocument(file) ?: return
+        // Always use the Antlers PSI file for tag collection, even if we receive the HTML file
+        val antlersFile = file.viewProvider.getPsi(AntlersLanguage.INSTANCE) ?: return
+        val document = PsiDocumentManager.getInstance(project).getDocument(antlersFile) ?: return
         val indentOptions = settings.getIndentOptionsByFile(file)
         val indentUnit = if (indentOptions.USE_TAB_CHARACTER) {
             "\t"
@@ -35,7 +38,7 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
             " ".repeat(indentOptions.INDENT_SIZE.coerceAtLeast(1))
         }
 
-        val standaloneTagsByLine = collectStandaloneTagsByLine(file, document)
+        val standaloneTagsByLine = collectStandaloneTagsByLine(antlersFile, document)
         if (standaloneTagsByLine.isEmpty()) return
 
         val startLine = document.getLineNumber(range.startOffset)
@@ -115,12 +118,28 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
         }
 
         val closingName = tag.closingTag?.tagName?.text
-        return when (closingName) {
-            "if" -> StructuralLine(ControlTagKind.CLOSE_IF)
-            "unless" -> StructuralLine(ControlTagKind.CLOSE_UNLESS)
-            "switch" -> StructuralLine(ControlTagKind.CLOSE_SWITCH)
-            else -> StructuralLine(ControlTagKind.OTHER_TAG)
+        if (closingName != null) {
+            return when (closingName.substringBefore(':')) {
+                "if" -> StructuralLine(ControlTagKind.CLOSE_IF)
+                "unless" -> StructuralLine(ControlTagKind.CLOSE_UNLESS)
+                "switch" -> StructuralLine(ControlTagKind.CLOSE_SWITCH)
+                else -> StructuralLine(ControlTagKind.CLOSE_TAG_PAIR, htmlTagName = closingName.substringBefore(':'))
+            }
         }
+
+        // Check if this is a known block tag opener (e.g. {{ collection:blog }})
+        val tagExpr = tag.tagExpression
+        if (tagExpr != null) {
+            val tagName = tagExpr.tagName?.text
+            if (tagName != null) {
+                val rootName = tagName.substringBefore(':')
+                if (rootName in AntlersBlockTags.NAMES) {
+                    return StructuralLine(ControlTagKind.OPEN_TAG_PAIR, htmlTagName = rootName)
+                }
+            }
+        }
+
+        return StructuralLine(ControlTagKind.OTHER_TAG)
     }
 
     private fun desiredIndentLevelFor(
@@ -131,6 +150,7 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
             ControlTagKind.OPEN_IF,
             ControlTagKind.OPEN_UNLESS,
             ControlTagKind.OPEN_SWITCH,
+            ControlTagKind.OPEN_TAG_PAIR,
             ControlTagKind.OTHER_TAG -> frames.size
 
             ControlTagKind.ELSE,
@@ -139,6 +159,13 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
             ControlTagKind.CLOSE_IF -> frames.lastMatchingIndex { it.kind == StructureKind.IF } ?: frames.size
             ControlTagKind.CLOSE_UNLESS -> frames.lastMatchingIndex { it.kind == StructureKind.UNLESS } ?: frames.size
             ControlTagKind.CLOSE_SWITCH -> frames.lastMatchingIndex { it.kind == StructureKind.SWITCH } ?: frames.size
+
+            ControlTagKind.CLOSE_TAG_PAIR -> {
+                val expectedTagName = info.htmlTagName
+                frames.lastMatchingIndex { it.kind == StructureKind.TAG_PAIR && it.tagName == expectedTagName }
+                    ?: frames.lastMatchingIndex { it.kind == StructureKind.TAG_PAIR }
+                    ?: frames.size
+            }
 
             ControlTagKind.HTML_OPEN,
             ControlTagKind.HTML_SELF_CLOSING -> frames.size
@@ -163,6 +190,14 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
             ControlTagKind.CLOSE_IF -> frames.removeLastMatching { it.kind == StructureKind.IF }
             ControlTagKind.CLOSE_UNLESS -> frames.removeLastMatching { it.kind == StructureKind.UNLESS }
             ControlTagKind.CLOSE_SWITCH -> frames.removeLastMatching { it.kind == StructureKind.SWITCH }
+            ControlTagKind.OPEN_TAG_PAIR -> frames.addLast(StructureFrame(StructureKind.TAG_PAIR, info.htmlTagName))
+            ControlTagKind.CLOSE_TAG_PAIR -> {
+                val expectedTagName = info.htmlTagName
+                val removed = frames.removeLastMatching { it.kind == StructureKind.TAG_PAIR && it.tagName == expectedTagName }
+                if (!removed) {
+                    frames.removeLastMatching { it.kind == StructureKind.TAG_PAIR }
+                }
+            }
             ControlTagKind.HTML_OPEN -> frames.addLast(StructureFrame(StructureKind.HTML, info.htmlTagName))
             ControlTagKind.HTML_CLOSE -> {
                 val expectedTagName = info.htmlTagName
@@ -209,7 +244,8 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
         HTML,
         IF,
         UNLESS,
-        SWITCH
+        SWITCH,
+        TAG_PAIR
     }
 
     private enum class ControlTagKind {
@@ -224,7 +260,16 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
         CLOSE_IF,
         CLOSE_UNLESS,
         CLOSE_SWITCH,
+        OPEN_TAG_PAIR,
+        CLOSE_TAG_PAIR,
         OTHER_TAG
+    }
+
+    companion object {
+        private val htmlOpeningTagPattern = Regex("""<([A-Za-z][\w:-]*)(?:\s+[^<>]*)?>""")
+        private val htmlClosingTagPattern = Regex("""</([A-Za-z][\w:-]*)\s*>""")
+        private val htmlSelfClosingTagPattern = Regex("""<([A-Za-z][\w:-]*)(?:\s+[^<>]*)?/\s*>""")
+
     }
 
     private fun classifyHtmlLine(trimmed: String): StructuralLine? {
@@ -269,9 +314,4 @@ class AntlersConditionalPostFormatProcessor : PostFormatProcessor {
         return true
     }
 
-    companion object {
-        private val htmlOpeningTagPattern = Regex("""<([A-Za-z][\w:-]*)(?:\s+[^<>]*)?>""")
-        private val htmlClosingTagPattern = Regex("""</([A-Za-z][\w:-]*)\s*>""")
-        private val htmlSelfClosingTagPattern = Regex("""<([A-Za-z][\w:-]*)(?:\s+[^<>]*)?/\s*>""")
-    }
 }

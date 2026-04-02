@@ -83,8 +83,7 @@ class AntlersEditorHighlighterTest : BasePlatformTestCase() {
             .filter { it.forcedTextAttributesKey == AntlersHighlighterColors.TAG_NAME }
             .map { text.substring(it.startOffset, it.endOffset) }
 
-        assertContainsElements(tagNameHighlights, "nav")
-        assertDoesntContain(tagNameHighlights, "footer_product")
+        assertContainsElements(tagNameHighlights, "nav", "footer_product")
         assertDoesntContain(tagNameHighlights, "url")
         assertDoesntContain(tagNameHighlights, "title")
     }

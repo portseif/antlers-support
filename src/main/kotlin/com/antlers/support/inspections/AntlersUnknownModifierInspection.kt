@@ -22,6 +22,8 @@ class AntlersUnknownModifierInspection : LocalInspectionTool() {
     override fun getGroupDisplayName(): String = "Antlers"
     override fun getShortName(): String = "AntlersUnknownModifier"
 
+    override fun isEnabledByDefault(): Boolean = false
+
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor {
         return object : AntlersVisitor() {
             override fun visitModifier(modifier: AntlersModifier) {

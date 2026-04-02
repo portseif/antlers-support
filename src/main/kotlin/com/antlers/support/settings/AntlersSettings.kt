@@ -19,6 +19,10 @@ class AntlersSettings : PersistentStateComponent<AntlersSettings.State> {
         var enableHoverDocumentation: Boolean = true,
         var enableAlpineJsInjection: Boolean = true,
         var enablePhpInjection: Boolean = true,
+        var enableParameterCompletion: Boolean = true,
+        var enableCustomTagNavigation: Boolean = true,
+        var enableLspServer: Boolean = true,
+        var enableAutoIndex: Boolean = false,
         var enableSemanticHighlighting: Boolean = true
     )
 

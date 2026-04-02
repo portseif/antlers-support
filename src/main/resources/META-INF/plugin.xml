@@ -36,6 +36,7 @@
     <depends>com.intellij.css</depends>
     <depends>JavaScript</depends>
     <depends optional="true" config-file="antlers-php.xml">com.jetbrains.php</depends>
+    <depends optional="true" config-file="antlers-lsp.xml">com.intellij.modules.lsp</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <!-- File Type -->
@@ -160,7 +161,7 @@
             shortName="AntlersUnknownModifier"
             displayName="Unknown Antlers modifier"
             groupName="Antlers"
-            enabledByDefault="true"
+            enabledByDefault="false"
             level="WEAK WARNING"
             implementationClass="com.antlers.support.inspections.AntlersUnknownModifierInspection"/>
 
@@ -169,9 +170,17 @@
             shortName="AntlersUnknownTag"
             displayName="Unknown Antlers tag"
             groupName="Antlers"
-            enabledByDefault="true"
+            enabledByDefault="false"
             level="WEAK WARNING"
             implementationClass="com.antlers.support.inspections.AntlersUnknownTagInspection"/>
+
+        <!-- Intentions -->
+        <intentionAction>
+            <language>Antlers</language>
+            <className>com.antlers.support.intentions.ExtractPartialIntention</className>
+            <category>Antlers</category>
+            <descriptionDirectoryName>ExtractPartialIntention</descriptionDirectoryName>
+        </intentionAction>
 
         <!-- Plugin Settings (Settings > Languages & Frameworks > Statamic) -->
         <applicationConfigurable
@@ -179,9 +188,42 @@
             instance="com.antlers.support.settings.AntlersSettingsConfigurable"
             id="com.statamic.toolkit.settings"
             displayName="Statamic"/>
+        <applicationConfigurable
+            parentId="com.statamic.toolkit.settings"
+            instance="com.antlers.support.settings.DataSourceConfigurable"
+            id="com.statamic.toolkit.settings.datasource"
+            displayName="Data Source"/>
+        <applicationConfigurable
+            parentId="com.statamic.toolkit.settings"
+            instance="com.antlers.support.settings.EditorConfigurable"
+            id="com.statamic.toolkit.settings.editor"
+            displayName="Editor"/>
+        <applicationConfigurable
+            parentId="com.statamic.toolkit.settings"
+            instance="com.antlers.support.settings.CompletionConfigurable"
+            id="com.statamic.toolkit.settings.completion"
+            displayName="Completion"/>
+        <applicationConfigurable
+            parentId="com.statamic.toolkit.settings"
+            instance="com.antlers.support.settings.NavigationConfigurable"
+            id="com.statamic.toolkit.settings.navigation"
+            displayName="Navigation &amp; Documentation"/>
+        <applicationConfigurable
+            parentId="com.statamic.toolkit.settings"
+            instance="com.antlers.support.settings.InjectionConfigurable"
+            id="com.statamic.toolkit.settings.injection"
+            displayName="Language Injection"/>
 
         <applicationService
             serviceImplementation="com.antlers.support.settings.AntlersSettings"/>
+
+        <projectService
+            serviceImplementation="com.antlers.support.statamic.StatamicProjectCollections"/>
+
+        <!-- Status bar widget showing Statamic indexing status -->
+        <statusBarWidgetFactory
+            id="StatamicIndexingStatus"
+            implementation="com.antlers.support.statusbar.StatamicStatusBarWidgetFactory"/>
 
         <!-- Code Style Settings (Settings > Editor > Code Style > Antlers) -->
         <codeStyleSettingsProvider

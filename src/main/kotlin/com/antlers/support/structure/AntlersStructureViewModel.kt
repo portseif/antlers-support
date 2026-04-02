@@ -5,6 +5,7 @@ import com.intellij.ide.structureView.StructureViewModelBase
 import com.intellij.ide.structureView.StructureViewTreeElement
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiFile
+import com.intellij.psi.xml.XmlTag
 import com.antlers.support.psi.AntlersAntlersTag
 import com.antlers.support.psi.AntlersComment
 import com.antlers.support.psi.AntlersConditionalTag
@@ -22,6 +23,7 @@ class AntlersStructureViewModel(psiFile: PsiFile, editor: Editor?) :
         AntlersAntlersTag::class.java,
         AntlersComment::class.java,
         AntlersConditionalTag::class.java,
-        AntlersNoparseBlock::class.java
+        AntlersNoparseBlock::class.java,
+        XmlTag::class.java
     )
 }

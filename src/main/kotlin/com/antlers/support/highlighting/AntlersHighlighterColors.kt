@@ -39,6 +39,9 @@ object AntlersHighlighterColors {
     val MODIFIER: TextAttributesKey =
         createTextAttributesKey("ANTLERS_MODIFIER", DefaultLanguageHighlighterColors.FUNCTION_DECLARATION)
 
+    val TAG_PATH: TextAttributesKey =
+        createTextAttributesKey("ANTLERS_TAG_PATH", DefaultLanguageHighlighterColors.FUNCTION_CALL)
+
     val PARAMETER: TextAttributesKey =
         createTextAttributesKey("ANTLERS_PARAMETER", DefaultLanguageHighlighterColors.METADATA)
 
