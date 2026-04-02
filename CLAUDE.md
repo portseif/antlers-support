@@ -181,6 +181,55 @@ Rules:
 - Because `{{ /if }}` and `{{ /unless }}` parse as `closingTag`, the closing branch remaps `if -> COND_IF` and `unless -> COND_UNLESS` before stack lookup.
 - `getPlaceholderText()` should show the full expression/condition text, trimmed and truncated at 60 characters, so folded blocks read like `{{ if site:environment === 'production' }}...`.
 
+### Auto-close Tag on `/`
+
+`AntlersTypedHandler` also handles `/` typed inside `{{ }}`. When the user types `{{ /`, it scans backward through the document text to find the nearest unclosed block tag and auto-completes the closing tag name.
+
+The scan uses a stack: closing tags push, opening block tags pop or return. Only tags in `AntlersBlockTags.NAMES` are considered block tags. The scan uses a regex over raw document text, not PSI traversal, for performance.
+
+### Auto-indent on Enter
+
+`AntlersEnterHandler.postProcessEnter()` checks if the previous line was a block tag opener (via `AntlersBlockTags.isBlockTag()`). If so, it adds one indent level to the new line. The indent unit is read from `CodeStyleSettingsManager`.
+
+### Block Tag Registry
+
+`AntlersBlockTags` (in `src/main/kotlin/com/antlers/support/AntlersBlockTags.kt`) is a shared `Set<String>` of tag names known to accept a closing `{{ /tag }}` pair. It is used by:
+
+- `AntlersConditionalPostFormatProcessor` — indents content inside block tag pairs
+- `AntlersEnterHandler` — auto-indents after block tag openers
+- `AntlersTypedHandler` — auto-closes `{{ /` with the nearest unclosed block tag
+- `AntlersStructureViewElement` — nests children under block tag openers
+- `AntlersCompletionContributor` — scope-aware variable detection
+
+When adding a new known block tag, add it to `AntlersBlockTags.NAMES` and all consumers benefit automatically.
+
+### Antlers Language Server (LSP)
+
+The plugin integrates the [Stillat Antlers Language Server](https://github.com/Stillat/vscode-antlers-language-server) for formatting and diagnostics. The compiled server JS is bundled at `src/main/resources/language-server/antlersls.js` (1.1MB, built with esbuild from the Stillat repo).
+
+Architecture:
+
+- `AntlersLspServerSupportProvider` triggers the server when `.antlers.html`/`.antlers.php` files open
+- `AntlersLspServerDescriptor` extracts the bundled JS to a temp directory and launches it via `node --stdio`
+- Registered as an optional dependency: `<depends optional="true" config-file="antlers-lsp.xml">com.intellij.modules.lsp</depends>`
+- LSP hover and go-to-definition are disabled (native PSI handles those); LSP formatting and diagnostics are enabled
+- Requires Node.js on the user's machine; finds it via Herd path, Homebrew, or system PATH
+
+To rebuild the bundled server from upstream:
+```bash
+cd /tmp && git clone --depth 1 https://github.com/Stillat/vscode-antlers-language-server.git antlers-lsp
+cd antlers-lsp && npm install && npm run bundle:antlersls
+cp antlersls/server.js /path/to/antlers-support/src/main/resources/language-server/antlersls.js
+```
+
+### Semantic Highlighting
+
+`AntlersHighlightingAnnotator` colors all identifier parts within `AntlersTagName` nodes, not just the head. It uses `isTagLike()` to distinguish real tags (namespaced, parameterized, or closing) from simple variables like `{{ title }}`.
+
+Partial paths (`partial:components/hero`) get the `TAG_PATH` text attribute which adds an underline effect, signaling they are navigable. The `:` and `/` separators within tag names are also colored.
+
+Both Darcula and Default color schemes define `ANTLERS_TAG_PATH` with `EFFECT_TYPE=1` (underline) matching the tag name foreground color.
+
 ## Data, Completion, and Documentation
 
 ### Statamic Catalog and Hover Docs
@@ -213,6 +262,43 @@ Variable-vs-tag hover resolution is intentionally conservative:
 
 `AntlersCompletionContributor` must call `result.addAllElements(StatamicData.XXX_ELEMENTS)`. Do not revert to building `LookupElement` instances per keystroke.
 
+### Tag Parameter Completion
+
+`StatamicTagParameters` (hand-maintained) holds parameter metadata for ~14 common Statamic tags. Each tag maps to a list of `TagParameter(name, description, required)`.
+
+`StatamicData.getParameterElements(tagName)` builds `LookupElement` instances with an `InsertHandler` that appends `=""` and places the caret between the quotes. Required parameters render bold.
+
+The completion contributor detects parameter context by finding the parent `AntlersTagExpression` via `PsiTreeUtil.getParentOfType()`, then filters out already-used parameter names from `tagExpression.parameterList`.
+
+When updating parameter data for a tag, verify against the official Statamic docs (e.g. `https://statamic.dev/tags/collection`).
+
+### Scope-Aware Variable Completion
+
+`StatamicScopeVariables` defines variables available inside tag pair loops:
+
+- **Loop variables** (`first`, `last`, `count`, `index`, `total_results`, etc.) — available in all tag pair contexts
+- **Tag-specific fields** — `collection` gets entry fields (`title`, `slug`, `url`, `date`, etc.), `nav` gets nav fields (`is_current`, `children`, `depth`), `taxonomy`/`search`/`assets`/`form` each have their own
+
+The completion contributor detects scope by walking the flat Antlers PSI tree with a stack (similar to the folding builder) to find the nearest enclosing unclosed block tag.
+
+### Collection Handle Discovery
+
+`StatamicProjectCollections` is a project-level service that discovers collection handles (and other Statamic resources) from both flat-file and Eloquent driver sources.
+
+Rules:
+
+- **Flat-file driver**: scans `content/collections/`, `content/navigation/`, `content/taxonomies/`, etc. for directories and YAML files
+- **Eloquent driver**: runs `php artisan tinker --execute` to query all Statamic Facades in a single call
+- **Driver detection**: reads `config/statamic/eloquent-driver.php` and checks if `collections.driver` is `'eloquent'`
+- **Background execution**: uses `ProgressManager.getInstance().run(Task.Backgroundable(...))` to show a progress bar in the status bar during indexing
+- **Cannot run processes inside ReadAction**: completion handlers run under ReadAction, so process execution (artisan) must happen on a background thread. The service pre-caches results; the completion handler only reads the cached list
+- **PHP discovery**: checks Herd path (`~/Library/Application Support/Herd/bin/php`), Homebrew (`/opt/homebrew/bin/php`), and system PATH
+- **Auto-index**: optional file watcher via `VirtualFileManager.VFS_CHANGES` with 2-second debounce
+
+### Completion Auto-popup
+
+`AntlersCompletionContributor.invokeAutoPopup()` returns `true` for `:` so that typing `{{ partial:` or `{{ collection:` immediately shows the completion popup without requiring Ctrl+Space.
+
 ## IDE Integration Patterns
 
 ### Settings
@@ -226,16 +312,23 @@ Every major feature should have a toggle. When adding a new toggleable feature:
 3. Wire it through `isModified`, `apply`, and `reset`
 4. Guard the feature entry point with `if (!AntlersSettings.getInstance().state.enableXxx) return`
 
-Current settings sections:
+#### Nested Settings Sub-pages
 
-- Editor
-- Completion
-- Navigation & Documentation
-- Language Injection
+Settings are organized as nested sub-pages under Languages & Frameworks > Statamic:
+
+- **Data Source** — driver detection, indexed resource counts, refresh button
+- **Editor** — auto-close, semantic highlighting
+- **Completion** — tags, modifiers, variables, parameters
+- **Navigation & Documentation** — partial nav, custom tag nav, hover docs
+- **Language Injection** — PHP, Alpine.js
+
+Each sub-page is a separate `Configurable` class registered in `plugin.xml` with `parentId="com.statamic.toolkit.settings"`. The parent `AntlersSettingsConfigurable` implements `SearchableConfigurable` and renders a landing page with clickable links to each child via `ShowSettingsUtil.getInstance().showSettingsDialog()`.
+
+**Important**: `Configurable.Composite` alone does NOT create tree children in IntelliJ. Each child must be explicitly registered as an `applicationConfigurable` in `plugin.xml` with the correct `parentId`.
 
 #### Settings configurable binding pattern
 
-`AntlersSettingsConfigurable` uses a `CheckboxField(box, read, write)` data class to bind each `JBCheckBox` to its getter and setter in `AntlersSettings.State`.
+Each sub-page configurable uses a `CheckboxField(box, read, write)` data class to bind each `JBCheckBox` to its getter and setter in `AntlersSettings.State`.
 
 The `fields: List<CheckboxField>` is built once. `isModified`, `apply`, and `reset` each collapse to a single `any` or `forEach` over that list. When adding a new toggle, add one entry to `fields` instead of updating three separate methods.
 
@@ -251,6 +344,42 @@ Rules:
 - Generators should open an existing file instead of overwriting it if the class already exists.
 
 Project-aware menu visibility is handled by lightweight action groups such as `StatamicProjectActionGroup` and `StatamicPhpInsertActionGroup`, not by duplicating enable/disable logic in every child action.
+
+### Go-to Custom Tag/Modifier Definition
+
+`AntlersGotoDeclarationHandler` chains three resolution strategies in order:
+
+1. **Partial navigation** — `partial:name` → view file (existing, guarded by `enablePartialNavigation`)
+2. **Custom tag navigation** — unknown tag name → `app/Tags/ClassName.php` (guarded by `enableCustomTagNavigation`)
+3. **Custom modifier navigation** — unknown modifier → `app/Modifiers/ClassName.php`
+
+Built-in Statamic tags (via `StatamicCatalog.isKnownTag()`) and block tags (via `AntlersBlockTags`) are skipped. Class name normalization uses `StatamicSnippetTemplates.normalizeTagClassName()` (same as the Statamic menu generators). File lookup uses `FilenameIndex` with a directory-scoped `GlobalSearchScope` limited to `app/Tags/` or `app/Modifiers/` for performance.
+
+Known limitation: Statamic tag classes can set `protected static $handle = 'custom_name'` to decouple the class name from the tag name. The filename-based lookup will miss these.
+
+### Extract Partial Intention
+
+`ExtractPartialIntention` is an `IntentionAction` (not `PsiElementBaseIntentionAction`) that:
+
+- Is available when the file is `.antlers.html`/`.antlers.php` AND the editor has a selection
+- Prompts for a partial name via `Messages.showInputDialog()`
+- Creates `resources/views/partials/{name}.antlers.html` using `VfsUtil.createDirectoryIfMissing()` + `VfsUtil.saveText()` (same pattern as `CreateStatamicTagAction`)
+- Replaces the selection with `{{ partial:{name} }}`
+- Opens the new file in the editor
+
+Registered in plugin.xml with `<intentionAction>` and description resources in `src/main/resources/intentionDescriptions/ExtractPartialIntention/`.
+
+### Status Bar Widget
+
+`StatamicStatusBarWidgetFactory` creates a status bar icon that shows a custom popup on click (not an action menu — uses `JBPopupFactory.createComponentPopupBuilder()` with a `GridBagLayout` panel).
+
+The popup displays driver type, indexing status, resource counts with handles, an auto-index checkbox, and a refresh button. It uses `RelativePoint` to position above the status bar.
+
+### Structure View Nesting
+
+`AntlersStructureViewElement` builds a virtual nested tree from the flat Antlers PSI by matching opening/closing tag pairs with a stack (same strategy as the folding builder). HTML landmark elements (`<header>`, `<main>`, `<nav>`, `<section>`, `<footer>`, `<article>`, `<aside>`) from the template data PSI tree are merged by document offset.
+
+The `withChildren()` factory method creates elements with pre-computed children, enabling the opener node to display its block contents as a nested subtree without the PSI itself being nested.
 
 ### Navigation Bar Integration
 
@@ -282,7 +411,16 @@ Rules:
 - Do not add fallback `FilenameIndex` scans that search the whole project by filename only from goto handlers.
 - JFlex states with custom start conditions need explicit `<<EOF>>` handling. Truncated Antlers blocks should reset to `YYINITIAL` and return `BAD_CHARACTER`.
 - `AntlersFileViewProvider.supportsIncrementalReparse()` is intentionally `false`. Do not flip it without a reproducible case and validation against mixed Antlers/HTML PSI correctness.
+- **Never run external processes inside a ReadAction.** Completion handlers run under ReadAction; calling `ScriptRunnerUtil.getProcessOutput()` from completion throws `Synchronous execution under ReadAction`. Use a background service (`executeOnPooledThread` or `Task.Backgroundable`) to pre-cache results, and have the completion handler read the cached data.
+- **Post-format processor must use the Antlers PSI tree explicitly.** Call `file.viewProvider.getPsi(AntlersLanguage.INSTANCE)` — the `file` parameter may be the HTML PSI file, causing `file.children` to yield zero `AntlersAntlersTag` nodes.
 - If the IDE freezes again, collect a thread dump or CPU snapshot before making more speculative performance changes.
+
+## Build Environment
+
+- **JDK 21 required** — set in `gradle.properties` as `javaVersion = 21`. The Gradle toolchain (`jvmToolchain(21)`) enforces this.
+- IntelliJ IDEA CE's bundled JBR (Java 25) is too new for the Gradle build. Install JDK 21 separately (e.g. via IntelliJ's File > Project Structure > SDKs > Download JDK).
+- Set `JAVA_HOME` when building from terminal: `export JAVA_HOME="/Users/$USER/Library/Java/JavaVirtualMachines/jbr-21.x.x/Contents/Home"`
+- **PHP for Eloquent indexing**: the plugin finds PHP at Herd (`~/Library/Application Support/Herd/bin/php`), Homebrew (`/opt/homebrew/bin/php`), or system PATH. Herd paths contain spaces — `GeneralCommandLine` handles quoting automatically.
 
 ## Grammar and Parser Patterns
 
@@ -326,4 +464,10 @@ Every version bump must update all of the following:
 - Generated code: `src/main/gen/` (gitignored, regenerated on build)
 - Grammar sources: `grammars/Antlers.flex`, `grammars/Antlers.bnf`
 - Plugin manifest: `src/main/resources/META-INF/plugin.xml`
+- Optional dependency configs: `src/main/resources/META-INF/antlers-php.xml`, `antlers-lsp.xml`
 - Color schemes: `src/main/resources/colorSchemes/`
+- Bundled LSP server: `src/main/resources/language-server/antlersls.js`
+- Intention descriptions: `src/main/resources/intentionDescriptions/`
+- Tag parameter data: `src/main/kotlin/com/antlers/support/statamic/StatamicTagParameters.kt` (hand-maintained)
+- Scope variable data: `src/main/kotlin/com/antlers/support/statamic/StatamicScopeVariables.kt` (hand-maintained)
+- Block tag registry: `src/main/kotlin/com/antlers/support/AntlersBlockTags.kt`
